@@ -59,6 +59,9 @@ const Auth = {
         // Merge local progress with server data
         this.mergeLocalProgress();
         
+        // Dispatch login event
+        window.dispatchEvent(new Event('auth:login'));
+        
         return { success: true, user: data.user };
       } else {
         return { success: false, error: data.error };
@@ -89,6 +92,9 @@ const Auth = {
         
         // Transfer local progress to new account
         this.mergeLocalProgress();
+        
+        // Dispatch login event
+        window.dispatchEvent(new Event('auth:login'));
         
         return { success: true, user: data.user };
       } else {

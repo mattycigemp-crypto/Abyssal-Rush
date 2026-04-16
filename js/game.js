@@ -318,6 +318,11 @@ const GameState = {
         ? [...baseOptions, 'LOGOUT']
         : [...baseOptions, 'LOGIN'];
       
+      // Ensure menuIdx stays within bounds when menu size changes
+      if (this.menuIdx >= menuOptions.length) {
+        this.menuIdx = menuOptions.length - 1;
+      }
+      
       if (Input.justPressed('Dash')) {
         this.menuIdx = (this.menuIdx + 1) % menuOptions.length;
       }
