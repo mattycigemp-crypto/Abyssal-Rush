@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ABYSSAL RUSH: DEEP DIVE</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="wrap">
+    <div id="user-badge" style="display: none;">
+      <span class="sync-status" id="sync-status"></span>
+      <span id="username-display">Guest</span>
+    </div>
+    <canvas id="c" width="1280" height="720" tabindex="0"></canvas>
+    
+    <div id="mobile-controls">
+      <div class="ctrl-group">
+        <button class="btn" id="bleft">◀</button>
+        <button class="btn" id="bright">▶</button>
+      </div>
+      <div class="ctrl-group">
+        <button class="btn action" id="bdash">◆</button>
+        <button class="btn" id="bjump">▲</button>
+        <button class="btn" id="bemote">☺</button>
+      </div>
+    </div>
+  </div>
+  <div id="hint">DETECTING DEVICE...</div>
+
+  <!-- Modules -->
+  <script src="js/config.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/shop.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+  
+  <!-- Auth Modal Trigger -->
+  <script>
+    // Show auth modal on load if not logged in
+    document.addEventListener('DOMContentLoaded', () => {
+      // Wait for game to initialize
+      setTimeout(() => {
+        if (!Auth.isLoggedIn) {
+          AuthUI.show();
+        } else {
+          updateUserBadge();
+        }
+      }, 100);
+    });
+    
+    function updateUserBadge() {
+      const badge = document.getElementById('user-badge');
+      const username = document.getElementById('username-display');
+      const syncStatus = document.getElementById('sync-status');
+      
+      if (Auth.isLoggedIn && Auth.user) {
+        badge.style.display = 'flex';
+        username.textContent = Auth.user.username;
+        syncStatus.className = 'sync-status';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+    
+    // Listen for auth state changes
+    window.addEventListener('auth:login', updateUserBadge);
+    window.addEventListener('auth:logout', () => {
+      document.getElementById('user-badge').style.display = 'none';
+    });
+  </script>
+</body>
+</html>
