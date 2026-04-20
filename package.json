@@ -7,10 +7,16 @@
     "dev": "vercel dev",
     "deploy": "vercel --prod"
   },
-  "keywords": ["game", "platformer", "underwater", "canvas"],
+  "keywords": [
+    "game",
+    "platformer",
+    "underwater",
+    "canvas"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "@vercel/kv": "^1.0.0"
   },
   "devDependencies": {
