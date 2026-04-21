@@ -634,7 +634,7 @@ export class World {
         const tick = () => {
           const t = Math.min(1, (performance.now() - start) / duration);
           m.group.scale.setScalar(1 + t * 0.8);
-          m.group.position.y += 0.02;
+          m.group.position.y = m.pos.y + 0.7 + t * 1.2;
           m.group.traverse((obj) => {
             if ((obj as THREE.Mesh).isMesh) {
               const mat = (obj as THREE.Mesh).material as THREE.Material & { opacity?: number; transparent?: boolean };
