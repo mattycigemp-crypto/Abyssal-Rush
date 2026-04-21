@@ -26,6 +26,13 @@ export function terrainHeight(x: number, z: number): number {
   return h1 + h2 + h3 + basin;
 }
 
+export interface MoonpetalNode {
+  pos: THREE.Vector3;
+  group: THREE.Group;
+  collected: boolean;
+  phase: number;
+}
+
 export class World {
   readonly group = new THREE.Group();
   readonly sun = new THREE.DirectionalLight(0xffffff, 1);
@@ -34,7 +41,11 @@ export class World {
   readonly fog: THREE.Fog;
   readonly shrinePos = new THREE.Vector3(40, 0, -30);
   readonly villagePos = new THREE.Vector3(0, 0, 0);
+  readonly ancientStonesPos = new THREE.Vector3(-48, 0, 34);
+  readonly deepGrovePos = new THREE.Vector3(-55, 0, -48);
   readonly enemySpawns: THREE.Vector3[] = [];
+  readonly deepGroveSpawns: THREE.Vector3[] = [];
+  readonly moonpetals: MoonpetalNode[] = [];
   readonly waterLevel = -1.2;
 
   private sky: THREE.Mesh;
@@ -154,6 +165,7 @@ export class World {
     // Village well + shrine
     this.buildVillage();
     this.buildShrine();
+    this.buildAncientStones();
 
     // Enemy spawn points near the shrine (the grove).
     const s = this.shrinePos;
@@ -162,6 +174,18 @@ export class World {
       new THREE.Vector3(s.x - 5, terrainHeight(s.x - 5, s.z + 4) + 1, s.z + 4),
       new THREE.Vector3(s.x + 2, terrainHeight(s.x + 2, s.z - 6) + 1, s.z - 6),
     );
+
+    // Enemy spawn points in the deep grove (far northwest corner).
+    const g = this.deepGrovePos;
+    this.deepGroveSpawns.push(
+      new THREE.Vector3(g.x + 4, terrainHeight(g.x + 4, g.z + 2) + 1, g.z + 2),
+      new THREE.Vector3(g.x - 3, terrainHeight(g.x - 3, g.z + 5) + 1, g.z + 5),
+      new THREE.Vector3(g.x - 5, terrainHeight(g.x - 5, g.z - 3) + 1, g.z - 3),
+      new THREE.Vector3(g.x + 2, terrainHeight(g.x + 2, g.z - 5) + 1, g.z - 5),
+    );
+
+    // Moonpetals scattered across the valley.
+    this.seedMoonpetals();
   }
 
   private buildTerrain() {
@@ -435,6 +459,7 @@ export class World {
   }
 
   shrine: THREE.Group = new THREE.Group();
+  ancientStones: THREE.Group = new THREE.Group();
 
   update(dt: number, time: number) {
     this.grassTime += dt;
@@ -450,6 +475,193 @@ export class World {
       const fm = flameMesh.material as THREE.MeshBasicMaterial;
       if (fm.opacity > 0) fm.opacity = flameMesh.userData.baseOpacity * flicker;
     }
+
+    // Animate moonpetals: gentle bob + slow spin.
+    for (const m of this.moonpetals) {
+      if (m.collected) continue;
+      m.phase += dt;
+      const bob = Math.sin(m.phase * 1.8) * 0.1;
+      m.group.position.y = m.pos.y + 0.7 + bob;
+      m.group.rotation.y = m.phase * 0.8;
+    }
+  }
+
+  private buildAncientStones() {
+    const group = new THREE.Group();
+    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x6a6560, roughness: 0.95 });
+    const darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x4a4540, roughness: 0.95 });
+    const mossMat = new THREE.MeshStandardMaterial({ color: 0x3a5a3a, roughness: 1 });
+
+    // A broken circle of 6 standing stones around a low altar.
+    const count = 6;
+    const radius = 3.2;
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2;
+      const tall = 2.4 + Math.sin(i * 1.7) * 0.6;
+      const stone = new THREE.Mesh(
+        new THREE.BoxGeometry(0.7, tall, 0.55),
+        i % 2 === 0 ? stoneMat : darkStoneMat
+      );
+      stone.position.set(Math.cos(a) * radius, tall / 2, Math.sin(a) * radius);
+      stone.rotation.y = a + 0.15 * Math.sin(i);
+      stone.rotation.z = 0.08 * Math.sin(i * 2.1);
+      stone.castShadow = true;
+      stone.receiveShadow = true;
+      group.add(stone);
+
+      // Moss cap on every other stone
+      if (i % 2 === 1) {
+        const moss = new THREE.Mesh(
+          new THREE.BoxGeometry(0.74, 0.14, 0.58),
+          mossMat
+        );
+        moss.position.set(stone.position.x, tall + 0.07, stone.position.z);
+        moss.rotation.copy(stone.rotation);
+        group.add(moss);
+      }
+    }
+
+    // Central altar stone.
+    const altar = new THREE.Mesh(
+      new THREE.BoxGeometry(1.6, 0.5, 1.2),
+      stoneMat
+    );
+    altar.position.y = 0.25;
+    altar.castShadow = true;
+    altar.receiveShadow = true;
+    group.add(altar);
+
+    // Faint rune glow atop the altar (becomes notable at night).
+    const rune = new THREE.Mesh(
+      new THREE.CircleGeometry(0.45, 24),
+      new THREE.MeshBasicMaterial({ color: 0x9acff5, transparent: true, opacity: 0.35 })
+    );
+    rune.rotation.x = -Math.PI / 2;
+    rune.position.y = 0.51;
+    group.add(rune);
+
+    const runeLight = new THREE.PointLight(0x9acff5, 0.9, 12, 2);
+    runeLight.position.set(0, 1.0, 0);
+    group.add(runeLight);
+
+    group.position.copy(this.ancientStonesPos);
+    group.position.y = terrainHeight(this.ancientStonesPos.x, this.ancientStonesPos.z);
+    this.ancientStonesPos.y = group.position.y;
+    this.group.add(group);
+    this.ancientStones = group;
+  }
+
+  private seedMoonpetals() {
+    // Hand-picked spread so the gathering quest naturally guides the player
+    // through several regions of the map.
+    const targets: THREE.Vector3[] = [
+      new THREE.Vector3(14, 0, -6),
+      new THREE.Vector3(-18, 0, 10),
+      new THREE.Vector3(22, 0, 24),
+      new THREE.Vector3(-30, 0, -10),
+      new THREE.Vector3(6, 0, 34),
+      new THREE.Vector3(32, 0, -6),
+      new THREE.Vector3(-10, 0, -38),
+      new THREE.Vector3(-38, 0, 18),
+    ];
+
+    const stemMat = new THREE.MeshStandardMaterial({ color: 0x4a7a3a, roughness: 0.9 });
+    const petalMat = new THREE.MeshStandardMaterial({
+      color: 0xbfe4ff,
+      emissive: 0x4f86b8,
+      emissiveIntensity: 0.9,
+      roughness: 0.4,
+    });
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+    for (const t of targets) {
+      const y = terrainHeight(t.x, t.z);
+      if (y < this.waterLevel + 0.3) continue;
+      const node = new THREE.Group();
+
+      // Clone materials per-instance so the fade-out animation on pickup
+      // only affects the collected moonpetal, not all remaining ones.
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03, 0.03, 0.7, 5),
+        stemMat.clone()
+      );
+      stem.position.y = -0.35;
+      node.add(stem);
+
+      // Four blue petals.
+      const petalGeom = new THREE.ConeGeometry(0.16, 0.3, 6);
+      const instancePetalMat = petalMat.clone();
+      for (let i = 0; i < 4; i++) {
+        const petal = new THREE.Mesh(petalGeom, instancePetalMat);
+        const a = (i / 4) * Math.PI * 2;
+        petal.position.set(Math.cos(a) * 0.12, 0.05, Math.sin(a) * 0.12);
+        petal.rotation.z = Math.cos(a) * 0.5;
+        petal.rotation.x = Math.sin(a) * 0.5;
+        petal.castShadow = false;
+        node.add(petal);
+      }
+
+      // Bright center so the flower is visible from far away.
+      const core = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), coreMat.clone());
+      node.add(core);
+
+      const light = new THREE.PointLight(0x9acff5, 0.6, 4, 2);
+      node.add(light);
+
+      node.position.set(t.x, y + 0.7, t.z);
+      this.group.add(node);
+
+      this.moonpetals.push({
+        pos: new THREE.Vector3(t.x, y, t.z),
+        group: node,
+        collected: false,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+
+  collectMoonpetalAt(playerPos: THREE.Vector3, radius = 1.2): MoonpetalNode | null {
+    const r2 = radius * radius;
+    for (const m of this.moonpetals) {
+      if (m.collected) continue;
+      const dx = m.pos.x - playerPos.x;
+      const dz = m.pos.z - playerPos.z;
+      if (dx * dx + dz * dz < r2) {
+        m.collected = true;
+        // Fade and remove the visual.
+        const start = performance.now();
+        const duration = 600;
+        const tick = () => {
+          const t = Math.min(1, (performance.now() - start) / duration);
+          m.group.scale.setScalar(1 + t * 0.8);
+          m.group.position.y += 0.02;
+          m.group.traverse((obj) => {
+            if ((obj as THREE.Mesh).isMesh) {
+              const mat = (obj as THREE.Mesh).material as THREE.Material & { opacity?: number; transparent?: boolean };
+              mat.transparent = true;
+              if (typeof mat.opacity === 'number') mat.opacity = 1 - t;
+            }
+          });
+          if (t < 1) requestAnimationFrame(tick);
+          else m.group.parent?.remove(m.group);
+        };
+        requestAnimationFrame(tick);
+        return m;
+      }
+    }
+    return null;
+  }
+
+  moonpetalsRemaining(): number {
+    return this.moonpetals.filter((m) => !m.collected).length;
+  }
+
+  moonpetalsCollected(): number {
+    return this.moonpetals.filter((m) => m.collected).length;
+  }
+
+  moonpetalTotal(): number {
+    return this.moonpetals.length;
   }
 
   lightShrineFlame() {
