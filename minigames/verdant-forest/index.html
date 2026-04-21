@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+  <title>Embers of the Verdant</title>
+  <!-- Styles are bundled in dist, but keeping Abyssal logic here -->
+  <style>
+    /* Abyssal Hub Branding */
+    #hub-btn {
+        position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+        padding: 8px 20px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,217,138,0.3);
+        border-radius: 20px; color: #ffd98a; font-family: 'Georgia', serif; font-size: 0.7rem; 
+        letter-spacing: 2px; cursor: pointer; z-index: 1000; backdrop-filter: blur(10px); 
+        text-decoration: none; text-transform: uppercase; transition: 0.3s;
+    }
+    #hub-btn:hover { background: #ffd98a; color: #000; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <a href="/" id="hub-btn">Return to Hub</a>
+    
+    <canvas id="game"></canvas>
+
+    <!-- Essential HUD Layers (Do not remove - Logic depends on these IDs) -->
+    <div id="hud" class="hidden">
+      <div class="hud-top-left">
+        <div class="health-wrap">
+          <div class="health-bar"><div id="health-fill"></div></div>
+          <div class="health-label">HP</div>
+        </div>
+        <div class="stamina-wrap">
+          <div class="stamina-bar"><div id="stamina-fill"></div></div>
+          <div class="health-label">EN</div>
+        </div>
+      </div>
+
+      <div class="hud-top-right">
+        <div id="time-of-day">Moonlight</div>
+        <div id="objective-panel">
+          <div class="objective-title">Current Quest</div>
+          <div id="objective-text">The stars are waiting...</div>
+        </div>
+      </div>
+
+      <div class="hud-bottom-center">
+        <div id="tooltip">Press E to Interact</div>
+      </div>
+    </div>
+
+    <!-- Letterbox and Dialogue System -->
+    <div id="letterbox">
+      <div class="bar top"></div>
+      <div class="bar bottom"></div>
+    </div>
+
+    <div id="dialogue">
+      <div id="dialogue-speaker">Spirit</div>
+      <div id="dialogue-text">Welcome back, Traveler.</div>
+    </div>
+
+    <div id="toast" class="hidden">New Area Discovered</div>
+
+    <!-- Gameplay Overlays -->
+    <div id="fade"></div>
+
+    <div id="title-screen">
+      <div class="title-inner">
+        <h1 class="game-title">Embers of the Verdant</h1>
+        <p class="game-subtitle">A quiet tale told in moonlight</p>
+        <div class="menu">
+          <button id="start-btn" class="menu-btn">Begin Journey</button>
+          <button id="skip-intro-btn" class="menu-btn secondary">Skip Intro</button>
+        </div>
+        <div class="controls-hint">
+          <strong>WASD</strong> move &nbsp; <strong>Shift</strong> sprint &nbsp; <strong>Space</strong> jump<br>
+          <strong>Left Click</strong> attack &nbsp; <strong>E</strong> interact &nbsp; <strong>Esc</strong> pause
+        </div>
+      </div>
+    </div>
+
+    <div id="pause-menu" class="hidden">
+      <div class="pause-inner">
+        <h2>Paused</h2>
+        <button id="resume-btn" class="menu-btn">Resume</button>
+        <div class="slider-row">
+          <span>Volume</span>
+          <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5">
+        </div>
+        <div class="slider-row">
+          <span>Sensitivity</span>
+          <input type="range" id="sensitivity-slider" min="0.1" max="2" step="0.1" value="1">
+        </div>
+        <button id="quit-btn" class="menu-btn secondary">Return to Title</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

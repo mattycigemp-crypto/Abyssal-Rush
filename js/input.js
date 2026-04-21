@@ -15,6 +15,12 @@ const Input = {
   tapTimeout: null,
   touchLeft: false, touchRight: false, 
   touchJump: false, touchDash: false, touchEmote: false,
+  
+  // Menu click tracking
+  menuClick: false,
+  menuClickPrev: false,
+  menuClickX: 0,
+  menuClickY: 0,
 
   update() {
     this.left = this.keys['ArrowLeft'] || this.keys['KeyA'] || this.touchLeft;
@@ -32,6 +38,13 @@ const Input = {
     for (let key in this.keys) {
       this.prev[key] = this.keys[key];
     }
+    // Track menu clicks
+    this.menuClickPrev = this.menuClick;
+    this.menuClick = false;
+  },
+  
+  justPressedMenuClick() {
+    return this.menuClick && !this.menuClickPrev;
   },
 
   justPressed(key) {
@@ -46,15 +59,23 @@ const Input = {
     const hint = document.getElementById('hint');
     if (hint) {
       if (this.isMobile) {
-        hint.innerHTML = '🎮 TAP: Left/Right/Thirds = Move | Center = Jump | Swipe Up = Dash | 🔥 HOLD Dash to SHOOT in Bullet Hell Mode | Swipe to Scroll Menus | Double Tap = Emote';
+        hint.innerHTML = '🎮 TAP: Left/Right/Thirds = Move | Center = Jump | Swipe Up = Dash | 🔥 AUTO-SHOOT in Bullet Hell Mode | Swipe to Scroll Menus | Double Tap = Emote';
       } else {
-        hint.innerHTML = '🖱️ CLICK: Left/Right/Thirds = Move | Center = Jump | Double Click = Emote | 🔥 HOLD X/DASH to SHOOT in Bullet Hell Mode | Scroll Wheel = Navigate Menus | Keys: WASD/Arrows, Z=Jump, X=Dash, E=Emote';
+        hint.innerHTML = '🖱️ CLICK: Left/Right/Thirds = Move | Center = Jump | Double Click = Emote | 🔥 PRESS F to SHOOT in Bullet Hell Mode | Scroll Wheel = Navigate Menus | Keys: WASD/Arrows, Z=Jump, X=Dash, F=Shoot, E=Emote';
       }
     }
 
     window.addEventListener('keydown', e => {
       this.keys[e.code] = true;
-      if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
+      if (['Space', 'ArrowUp', 'ArrowDown', 'Tab'].includes(e.code)) e.preventDefault();
+      
+      // Tab key for shop category switching
+      if (e.code === 'Tab' && window.GameState && window.GameState.showShop) {
+        const categories = ['skins', 'emotes', 'trails', 'nameplates'];
+        const currentIdx = categories.indexOf(window.GameState.shopCategory);
+        window.GameState.shopCategory = categories[(currentIdx + 1) % categories.length];
+      }
+      
       if (e.code === 'KeyP' || e.code === 'Escape') {
         if (window.GameState) window.GameState.togglePause();
       }
@@ -110,6 +131,17 @@ const Input = {
               Shop.save();
             }
             alert('🌊 SECRET DISCOVERED!\n"ABYSS" typed!\n+500 Pearls!');
+          }
+          
+          // 🛡️ SECRET: TYPE "ADMIN" to become admin
+          gs.adminCommandBuffer += e.key?.toUpperCase() || '';
+          gs.adminCommandBuffer = gs.adminCommandBuffer.slice(-5);
+          if (gs.adminCommandBuffer === 'ADMIN') {
+            if (typeof Auth !== 'undefined' && !Auth.isMod()) {
+              Auth.setRole('admin');
+              alert('🛡️ ADMIN POWERS ACTIVATED!\nYou now have admin access!');
+              gs.adminCommandBuffer = ''; // Clear buffer
+            }
           }
         }
       }
@@ -324,21 +356,28 @@ const Input = {
       const isMenuState = () => {
         if (!window.GameState) return false;
         const s = window.GameState.state;
-        return s === 0 || s === 6 || s === 7 || s === 8; // TITLE, CHAR_SELECT, MODE_SELECT, DIFF_SELECT
+        // TITLE, PAUSE, CHAR_SELECT, MODE_SELECT, DIFF_SELECT, RANKED, LEADERBOARD, TUTORIAL, MATCHMAKING
+        return s === 0 || s === 2 || s === 6 || s === 7 || s === 8 || s === 9 || s === 10 || s === 11 || s === 12;
       };
       
-      canvas.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        AudioSys.init();
-        mouseDown = true;
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const canvasWidth = rect.width;
-        const canvasHeight = rect.height;
+       canvas.addEventListener('mousedown', (e) => {
+         e.preventDefault();
+         AudioSys.init();
+         mouseDown = true;
+         const rect = canvas.getBoundingClientRect();
+         // Properly scale mouse coordinates to match canvas internal resolution (1280x720)
+         const scaleX = canvas.width / rect.width;
+         const scaleY = canvas.height / rect.height;
+         const x = (e.clientX - rect.left) * scaleX;
+         const y = (e.clientY - rect.top) * scaleY;
+         const canvasWidth = canvas.width;
+         const canvasHeight = canvas.height;
         
         // MENU STATE: Handle menu clicks
-        if (isMenuState()) {
+        if (isMenuState() || window.GameState?.showShop) {
+          Input.menuClick = true;
+          Input.menuClickX = x;
+          Input.menuClickY = y;
           const gs = window.GameState;
           if (gs.state === 0) { // TITLE
             // 🔍 HIDDEN SECRET: Click the "DEEP DIVE" subtitle text!
@@ -368,36 +407,29 @@ const Input = {
               return;
             }
             
-            // Check if clicked on menu options
-            const menuYStart = canvasHeight / 2 + 10;
-            const menuSpacing = 45;
-            const menuOptions = ['PLAY', 'TUTORIAL', 'RANKED', 'LEADERBOARD', 'SHOP'];
-            
+            // Check if clicked on menu options (with dynamic LOGIN/LOGOUT)
+            // menuY = pillY+48+18 = (iconY+76)+48+18 = (105+76)+48+18 = 247
+            // cardH=52, cardGap=10 → spacing=62 per card
+            const menuYStart = 247;
+            const menuSpacing = 62;
+            const baseOptions = ['PLAY', 'TUTORIAL', 'RANKED', 'LEADERBOARD', 'SHOP'];
+            const menuOptions = (typeof Auth !== 'undefined' && Auth.isLoggedIn)
+              ? [...baseOptions, 'LOGOUT']
+              : [...baseOptions, 'LOGIN'];
+            const cardW = 340;
+            const clickCenterX = canvasWidth / 2;
+
             for (let i = 0; i < menuOptions.length; i++) {
               const optionY = menuYStart + i * menuSpacing;
-              // Check if click is within text area (approximate)
-              if (y >= optionY - 20 && y <= optionY + 10 && x >= canvasWidth * 0.3 && x <= canvasWidth * 0.7) {
+              if (y >= optionY && y <= optionY + 52 &&
+                  x >= clickCenterX - cardW / 2 && x <= clickCenterX + cardW / 2) {
                 gs.menuIdx = i;
-                // Trigger selection
-                const option = menuOptions[i];
-                if (option === 'PLAY') {
-                  gs.state = 7; // MODE_SELECT
-                  gs.menuIdx = 0;
-                } else if (option === 'TUTORIAL') {
-                  gs.state = 11; // TUTORIAL
-                  gs.tutorialPage = 0;
-                } else if (option === 'RANKED') {
-                  gs.state = 9; // RANKED
-                } else if (option === 'LEADERBOARD') {
-                  gs.state = 10; // LEADERBOARD
-                  gs.leaderboardType = 'global';
-                } else if (option === 'SHOP') {
-                  gs.showShop = true;
-                  gs.shopCategory = 'skins';
-                }
                 return;
               }
             }
+          } else if (gs.state === 2) { // PAUSE
+             // Clicks are recorded, let game.js handle them
+
           } else if (gs.state === 10) { // LEADERBOARD
             // 🔍 SECRET: Click the trophy at the top!
             if (x > canvasWidth/2 - 50 && x < canvasWidth/2 + 50 && 
@@ -412,11 +444,9 @@ const Input = {
               }
               return;
             }
-            // Click anywhere else to go back
-            gs.state = 0; // TITLE
           } else if (gs.state === 9) { // RANKED
-            // Click anywhere to go back
-            gs.state = 0; // TITLE
+            // Clicks handled by game.js
+
           } else if (gs.state === 11) { // TUTORIAL
             // Click to advance page
             if (y < canvasHeight - 50) {
@@ -424,69 +454,93 @@ const Input = {
             } else {
               gs.state = 0; // TITLE - bottom click goes back
             }
+          } else if (gs.state === 12) { // MATCHMAKING
+            // Click anywhere in bottom half to cancel matchmaking
+            if (y >= canvasHeight * 0.6) {
+              gs.cancelMatchmaking();
+            }
+            return; // Block all other clicks during matchmaking
           } else if (gs.state === 7) { // MODE_SELECT
-            const modeYStart = 200;
-            const modeSpacing = 100;
-            
-            for (let i = 0; i < 3; i++) { // Now 3 modes!
-              const optionY = modeYStart + i * modeSpacing;
-              if (y >= optionY - 40 && y <= optionY + 40 && x >= canvasWidth * 0.2 && x <= canvasWidth * 0.8) {
-                gs.selectedMode = i;
-                // Enable shooting for BULLET_HELL mode
-                if (gs.player) {
-                  gs.player.canShoot = (i === 2);
-                  if (i === 2) gs.player.weaponLevel = 1;
+            // startCardY = 200 (matches draw code), cardHeight=100, gap=15
+            const modeCardH = 100;
+            const modeGap   = 15;
+            const modeStart = 200;
+            const modeCardW = 360;
+            const modeCX    = canvasWidth / 2;
+
+            for (let i = 0; i < 4; i++) {
+              const optionY = modeStart + i * (modeCardH + modeGap);
+              if (y >= optionY && y <= optionY + modeCardH &&
+                  x >= modeCX - modeCardW / 2 && x <= modeCX + modeCardW / 2) {
+                if (i === 3) {
+                  gs.selectMenuOption('1v1 PVP');
+                } else {
+                  gs.selectedMode = i;
+                  if (gs.player) {
+                    gs.player.canShoot = (i === 2);
+                    if (i === 2) gs.player.weaponLevel = 1;
+                  }
+                  gs.state = 6; // CHAR_SELECT
+                  gs.menuIdx = 0;
                 }
-                gs.state = 6; // CHAR_SELECT
-                gs.menuIdx = 0;
                 return;
               }
             }
-            // Back button
-            if (y >= canvasHeight - 80 && y <= canvasHeight - 40) {
-              gs.state = 0; // TITLE
+            // Back button: y=CFG.H-55=665, h=36, w=140 centered
+            const bbY1 = canvasHeight - 55, bbW1 = 140;
+            if (y >= bbY1 && y <= bbY1 + 36 && x >= canvasWidth/2 - bbW1/2 && x <= canvasWidth/2 + bbW1/2) {
+              gs.state = 0;
               gs.menuIdx = 0;
             }
           } else if (gs.state === 6) { // CHAR_SELECT
-            const charYStart = 200;
-            const charSpacing = 100;
-            
+            // cards: cardW=280, gap=30, centered, cardTopY=160, cardH=200
+            const charCardW2 = 280, charCardH2 = 200, gap2 = 30;
+            const totalW2 = 3 * charCardW2 + 2 * gap2;
+            const startX3 = canvasWidth / 2 - totalW2 / 2;
+            const cardTopY2 = 160;
+            let charHit = false;
             for (let i = 0; i < 3; i++) {
-              const optionY = charYStart + i * charSpacing;
-              if (y >= optionY - 40 && y <= optionY + 40 && x >= canvasWidth * 0.2 && x <= canvasWidth * 0.8) {
+              const cardLeft2 = startX3 + i * (charCardW2 + gap2);
+              if (x >= cardLeft2 && x <= cardLeft2 + charCardW2 && y >= cardTopY2 && y <= cardTopY2 + charCardH2) {
                 gs.selectedChar = i;
                 gs.state = 8; // DIFF_SELECT
                 gs.menuIdx = 0;
+                charHit = true;
                 return;
               }
             }
             // Back button
-            if (y >= canvasHeight - 80 && y <= canvasHeight - 40) {
+            const bbY2 = canvasHeight - 55, bbW2 = 140;
+            if (!charHit && y >= bbY2 && y <= bbY2 + 36 && x >= canvasWidth/2 - bbW2/2 && x <= canvasWidth/2 + bbW2/2) {
               gs.state = 7; // MODE_SELECT
               gs.menuIdx = 0;
             }
           } else if (gs.state === 8) { // DIFF_SELECT
-            const diffYStart = 180;
-            const diffSpacing = 55;
-            
+            // 3x3 grid: cardW=240, cardH=110, gapX=20, gapY=20, startCardY=150
+            const cols2 = 3, dCardW = 240, dCardH = 110, dGapX = 20, dGapY = 20;
+            const dStartX = canvasWidth / 2 - (cols2 * dCardW + (cols2-1)*dGapX) / 2;
+            const dStartY2 = 150;
+            let diffHit = false;
             for (let i = 0; i < 9; i++) {
-              const optionY = diffYStart + Math.floor(i / 3) * diffSpacing;
-              const optionX = (i % 3) * (canvasWidth / 3) + canvasWidth / 6;
-              
-              if (Math.abs(y - optionY) < 25 && Math.abs(x - optionX) < 80) {
+              const col2 = i % cols2, row2 = Math.floor(i / cols2);
+              const cLeft = dStartX + col2 * (dCardW + dGapX);
+              const cTop  = dStartY2 + row2 * (dCardH + dGapY);
+              if (x >= cLeft && x <= cLeft + dCardW && y >= cTop && y <= cTop + dCardH) {
                 gs.selectedDifficulty = i;
                 gs.initLevel(0);
                 gs.state = 1; // PLAY
+                diffHit = true;
                 return;
               }
             }
             // Back button
-            if (y >= canvasHeight - 80 && y <= canvasHeight - 40) {
+            const bbY3 = canvasHeight - 55, bbW3 = 140;
+            if (!diffHit && y >= bbY3 && y <= bbY3 + 36 && x >= canvasWidth/2 - bbW3/2 && x <= canvasWidth/2 + bbW3/2) {
               gs.state = 6; // CHAR_SELECT
               gs.menuIdx = 0;
             }
           }
-          return; // Don't process as gameplay input
+          // Allow menu click processing - DO NOT RETURN HERE!
         }
         
         // GAMEPLAY STATE: Normal controls
@@ -502,11 +556,14 @@ const Input = {
         }
       });
       
-      canvas.addEventListener('mousemove', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const canvasWidth = rect.width;
+       canvas.addEventListener('mousemove', (e) => {
+         const rect = canvas.getBoundingClientRect();
+         // Properly scale mouse coordinates to match canvas internal resolution
+         const scaleX = canvas.width / rect.width;
+         const scaleY = canvas.height / rect.height;
+         const x = (e.clientX - rect.left) * scaleX;
+         const y = (e.clientY - rect.top) * scaleY;
+         const canvasWidth = canvas.width;
         
         // Always track mouse position for UI hover effects
         if (window.GameState) {
@@ -516,61 +573,100 @@ const Input = {
           // Update menuIdx based on hover for menu screens
           if (isMenuState() && !mouseDown) {
             const gs = window.GameState;
+            const cw = canvas.width;   // 1280
+            const ch = canvas.height;  // 720
+            const cx = cw / 2;
+
+            // ── Shared back button hit-box (all sub-menus) ──
+            // Drawn at: y=CFG.H-55, h=36, w=140, centered
+            const BBY = ch - 55, BBH = 36, BBW = 140;
+            const isOverBack = y >= BBY && y <= BBY + BBH && x >= cx - BBW/2 && x <= cx + BBW/2;
+
+            let overInteractive = false;
+
             if (gs.state === 0) { // TITLE
-              const menuYStart = rect.height / 2 + 10;
-              const menuSpacing = 45;
-              for (let i = 0; i < 5; i++) {
-                const optionY = menuYStart + i * menuSpacing;
-                if (y >= optionY - 20 && y <= optionY + 10) {
+              // cards: menuY=247, cardH=52, cardGap=10 → spacing=62, cardW=340
+              const menuYStart = 247, spacing = 62, cardW = 340, cardH = 52;
+              let hit = false;
+              for (let i = 0; i < 6; i++) {
+                const topY = menuYStart + i * spacing;
+                if (y >= topY && y <= topY + cardH && x >= cx - cardW/2 && x <= cx + cardW/2) {
                   gs.menuIdx = i;
+                  hit = true;
+                  overInteractive = true;
                   break;
                 }
               }
+
+            } else if (gs.state === 2) { // PAUSE
+               const pBtnW = 200, pBtnH = 50, pBtnGap = 20;
+               const pBtnY = ch / 2 + 30;
+               const pRx = cx - pBtnW - pBtnGap / 2;
+               const pQx = cx + pBtnGap / 2;
+               if (y >= pBtnY && y <= pBtnY + pBtnH) {
+                 if (x >= pRx && x <= pRx + pBtnW) overInteractive = true;
+                 else if (x >= pQx && x <= pQx + pBtnW) overInteractive = true;
+               }
             } else if (gs.state === 7) { // MODE_SELECT
-              const modeYStart = 200;
-              const modeSpacing = 100;
+              // cards: startCardY=200, cardH=100, gap=15 → spacing=115, cardW=360
+              const modeH = 100, modeGap = 15, modeStart = 200, modeW = 360;
+              let hit = false;
               for (let i = 0; i < 3; i++) {
-                const optionY = modeYStart + i * modeSpacing;
-                if (y >= optionY - 40 && y <= optionY + 40) {
+                const topY = modeStart + i * (modeH + modeGap);
+                if (y >= topY && y <= topY + modeH && x >= cx - modeW/2 && x <= cx + modeW/2) {
                   gs.menuIdx = i;
+                  hit = true;
+                  overInteractive = true;
                   break;
                 }
               }
-              // Check back button hover
-              const backBtnY = rect.height - 50;
-              if (y > backBtnY - 20 && y < backBtnY + 10) {
-                gs.menuIdx = -1; // Special value for back button
-              }
+              if (!hit && isOverBack) { gs.menuIdx = -1; overInteractive = true; }
+
             } else if (gs.state === 6) { // CHAR_SELECT
-              const charSpacing = 260;
-              const startX = rect.width/2 - 260;
+              // cards: horizontal row, cardWidth=280, gap=30, centered, cardY from startY+80=160
+              const charCardW = 280, charCardH = 200, gap = 30;
+              const totalW = 3 * charCardW + 2 * gap;
+              const startX = cx - totalW / 2;
+              const cardTopY = 160;
+              let hit = false;
               for (let i = 0; i < 3; i++) {
-                const optionX = startX + i * charSpacing;
-                if (x >= optionX - 110 && x <= optionX + 110 && y >= 180 && y <= 340) {
+                const cardLeft = startX + i * (charCardW + gap);
+                if (x >= cardLeft && x <= cardLeft + charCardW && y >= cardTopY && y <= cardTopY + charCardH) {
                   gs.menuIdx = i;
+                  hit = true;
+                  overInteractive = true;
                   break;
                 }
               }
+              if (!hit && isOverBack) { gs.menuIdx = -1; overInteractive = true; }
+
             } else if (gs.state === 8) { // DIFF_SELECT
-              const cols = 3;
-              const boxW = 260;
-              const boxH = 120;
-              const startX = rect.width/2 - (cols * boxW) / 2 + boxW/2;
-              const startY = 150;
-              
+              // 3×3 grid: startX centered, cardW=240, cardH=110, gapX=20, gapY=20
+              // startCardY = startY+70 = 80+70 = 150
+              // x coord is CENTERED on card: startX + col*(cardW+gapX)
+              const cols = 3, cardW2 = 240, cardH2 = 110, gapX = 20, gapY = 20;
+              const startX2 = cx - (cols * cardW2 + (cols-1)*gapX) / 2;
+              const startCardY2 = 150;
+              let hit = false;
               for (let i = 0; i < 9; i++) {
-                const col = i % cols;
-                const row = Math.floor(i / cols);
-                const optionX = startX + col * boxW;
-                const optionY = startY + row * (boxH + 20);
-                
-                if (x >= optionX - boxW/2 && x <= optionX + boxW/2 &&
-                    y >= optionY && y <= optionY + boxH) {
+                const col = i % cols, row = Math.floor(i / cols);
+                const cardLeft = startX2 + col * (cardW2 + gapX);
+                const cardTop  = startCardY2 + row * (cardH2 + gapY);
+                if (x >= cardLeft && x <= cardLeft + cardW2 && y >= cardTop && y <= cardTop + cardH2) {
                   gs.menuIdx = i;
+                  hit = true;
+                  overInteractive = true;
                   break;
                 }
               }
+              if (!hit && isOverBack) { gs.menuIdx = -1; overInteractive = true; }
             }
+
+            // Custom cursor: pointer for interactive elements, default otherwise
+            canvas.style.cursor = overInteractive ? 'pointer' : 'default';
+          } else if (!isMenuState()) {
+            // Reset cursor when leaving menu
+            canvas.style.cursor = '';
           }
         }
         
@@ -606,14 +702,17 @@ const Input = {
       // Double click/tap = emote (only during gameplay)
       let lastClickTime = 0;
       canvas.addEventListener('click', (e) => {
-        if (!isGameplayState()) return;
-        const now = Date.now();
-        if (now - lastClickTime < 300) {
-          // Double click detected
-          this.touchEmote = true;
-          setTimeout(() => { this.touchEmote = false; }, 200);
+        // Double click/tap = emote (only during gameplay)
+        if (isGameplayState()) {
+          const now = Date.now();
+          if (now - lastClickTime < 300) {
+            // Double click detected
+            this.touchEmote = true;
+            setTimeout(() => { this.touchEmote = false; }, 200);
+          }
+          lastClickTime = now;
         }
-        lastClickTime = now;
+        // Allow clicks to pass through for menu handling
       });
     }
   }

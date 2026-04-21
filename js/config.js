@@ -13,7 +13,7 @@ const CFG = {
   IFRAMES: 100, KNOCKBACK: 5
 };
 
-const STATE = { TITLE: 0, PLAY: 1, PAUSE: 2, DEAD: 3, WIN: 4, LEVEL_TRANSITION: 5, CHAR_SELECT: 6, MODE_SELECT: 7, DIFF_SELECT: 8, RANKED: 9, LEADERBOARD: 10, TUTORIAL: 11 };
+const STATE = { TITLE: 0, PLAY: 1, PAUSE: 2, DEAD: 3, WIN: 4, LEVEL_TRANSITION: 5, CHAR_SELECT: 6, MODE_SELECT: 7, DIFF_SELECT: 8, RANKED: 9, LEADERBOARD: 10, TUTORIAL: 11, MATCHMAKING: 12 };
 const POWERUP_TYPES = ['SHIELD', 'MAGNET', 'SPEED', 'DOUBLE_JUMP', 'EXTRA_LIFE', 'WEAPON'];
 const CHARACTERS = [
   { id: 0, name: 'DIVER', col: '#0af', lives: 3, spd: 7.5, jump: -6.5, dash: 14, desc: 'BALANCED: The classic explorer.' },
@@ -23,7 +23,8 @@ const CHARACTERS = [
 const MODES = [
   { id: 0, name: 'ADVENTURE', desc: 'STORY: EXPLORE THE REEF' },
   { id: 1, name: 'SURVIVAL', desc: 'ENDLESS: DIVE UNTIL DEATH' },
-  { id: 2, name: 'BULLET_HELL', desc: '🔥 SHOOT EM UP: DODGE AND DESTROY', shooting: true }
+  { id: 2, name: 'BULLET_HELL', desc: '🔥 SHOOT EM UP: DODGE AND DESTROY', shooting: true },
+  { id: 3, name: '1v1 PVP', desc: '🌐 ONLINE: RACE A REAL PLAYER', pvp: true }
 ];
 
 // 9 Special Difficulties - Each with unique modifiers

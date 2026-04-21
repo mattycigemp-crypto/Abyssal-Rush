@@ -1,7 +1,17 @@
-import { kv } from '@vercel/kv';
+import { createClient } from 'redis';
 import crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+// Create Redis client
+const kv = createClient({
+  url: process.env.KV_URL || process.env.REDIS_URL
+});
+
+// Connect to Redis
+if (!kv.isReady) {
+  kv.connect().catch(console.error);
+}
 
 function verifyToken(token) {
   try {
@@ -105,4 +115,9 @@ export default async function handler(req, res) {
     console.error('Sync error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
+}
+
+// Ensure Redis connection on cold start
+if (!kv.isReady) {
+  kv.connect().catch(console.error);
 }

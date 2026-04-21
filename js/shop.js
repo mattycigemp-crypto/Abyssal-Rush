@@ -350,42 +350,45 @@ const Shop = {
   loadLeaderboard() {
     const saved = localStorage.getItem('abyssal_rush_leaderboard');
     if (saved) {
-      this.leaderboard = { ...this.leaderboard, ...JSON.parse(saved) };
+      try {
+        const parsed = JSON.parse(saved);
+        this.leaderboard = { ...this.leaderboard, ...parsed };
+        
+        // Sanitize survival runs by checking bounds and re-calculating score
+        if (Array.isArray(this.leaderboard.survival)) {
+          this.leaderboard.survival = this.leaderboard.survival.filter(entry => {
+            if (typeof entry.time !== 'number' || entry.time < 0 || 
+                typeof entry.crystals !== 'number' || entry.crystals < 0 || 
+                typeof entry.deaths !== 'number' || entry.deaths < 0 ||
+                typeof entry.difficulty !== 'number') {
+              return false;
+            }
+            const diffMult = DIFFICULTIES[entry.difficulty]?.modifiers?.pearlMult || 1;
+            const expectedScore = Math.floor((entry.crystals * 10 + (10000 / Math.max(entry.time, 1))) * diffMult);
+            return Math.abs(entry.score - expectedScore) <= 2;
+          });
+        }
+        
+        // Sanitize global leaderboard (MMR bounding)
+        if (Array.isArray(this.leaderboard.global)) {
+          this.leaderboard.global = this.leaderboard.global.filter(p => {
+            return typeof p.mmr === 'number' && p.mmr >= 0 && p.mmr <= 10000 &&
+                   typeof p.wins === 'number' && p.wins >= 0 &&
+                   typeof p.matches === 'number' && p.matches >= p.wins;
+          });
+        }
+      } catch (e) {
+        console.error("Failed to parse leaderboard:", e);
+      }
     }
-    // Generate some AI opponents if empty
-    if (this.leaderboard.global.length === 0) {
-      this.generateAIOpponents();
-    }
+    // No AI placeholders - only real players!
   },
   
   saveLeaderboard() {
     localStorage.setItem('abyssal_rush_leaderboard', JSON.stringify(this.leaderboard));
   },
   
-  generateAIOpponents() {
-    const aiNames = ['Neptune', 'Poseidon', 'Aquaman', 'Nemo', 'Dory', 'Marlin', 'Crush', 'Squirt', 
-                     'Sebastian', 'Flounder', 'Ariel', 'Ursula', 'KingTriton', 'Manta', 'Kraken'];
-    const tiers = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND'];
-    
-    for (let i = 0; i < 20; i++) {
-      const mmr = 800 + Math.floor(Math.random() * 1500);
-      const tier = this.tiers.slice().reverse().find(t => mmr >= t.minMMR)?.name || 'BRONZE';
-      
-      this.leaderboard.global.push({
-        rank: i + 1,
-        name: aiNames[i % aiNames.length] + (i > 14 ? 'Jr' : ''),
-        mmr: mmr,
-        tier: tier,
-        wins: Math.floor(Math.random() * 50) + 10,
-        matches: Math.floor(Math.random() * 80) + 20,
-        isAI: true
-      });
-    }
-    
-    this.leaderboard.global.sort((a, b) => b.mmr - a.mmr);
-    this.leaderboard.global.forEach((p, i) => p.rank = i + 1);
-    this.saveLeaderboard();
-  },
+  // No AI placeholders - leaderboard only shows real players!
   
   // Submit player's run to leaderboard
   submitRun(level, time, crystals, deaths, difficulty) {
@@ -409,7 +412,8 @@ const Shop = {
     this.leaderboard.survival = this.leaderboard.survival.slice(0, 50);
     
     // Update global leaderboard with player's ranked stats
-    const playerEntry = this.leaderboard.global.find(p => p.name === 'YOU');
+    const username = (typeof Auth !== 'undefined' && Auth.user) ? Auth.user.username : 'Guest';
+    const playerEntry = this.leaderboard.global.find(p => p.name === username);
     if (playerEntry) {
       playerEntry.mmr = this.rankedData.mmr;
       playerEntry.tier = this.rankedData.tier;
@@ -418,12 +422,12 @@ const Shop = {
     } else {
       this.leaderboard.global.push({
         rank: 0,
-        name: 'YOU',
+        name: username,
         mmr: this.rankedData.mmr,
         tier: this.rankedData.tier,
         wins: this.rankedData.wins,
         matches: this.rankedData.matchesPlayed,
-        isAI: false
+        isPlayer: true
       });
     }
     

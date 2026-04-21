@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Nova Siege | Abyssal Rush</title>
+  <link rel="icon" type="image/svg+xml" href="/minigames/space-favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* Modern Game Header */
+    .game-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 70px;
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      z-index: 200;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      transition: transform 0.2s ease;
+    }
+
+    .header-logo:hover {
+      transform: scale(1.02);
+    }
+
+    .logo-icon {
+      font-size: 28px;
+      filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.5));
+    }
+
+    .logo-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.5px;
+    }
+
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .nav-link {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .nav-link:hover {
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(148, 163, 184, 0.2);
+    }
+
+    .nav-home {
+      background: linear-gradient(135deg, rgba(167, 139, 250, 0.2) 0%, rgba(236, 72, 153, 0.2) 100%);
+      border-color: rgba(167, 139, 250, 0.3);
+      color: #a78bfa;
+    }
+
+    .nav-home:hover {
+      background: linear-gradient(135deg, rgba(167, 139, 250, 0.3) 0%, rgba(236, 72, 153, 0.3) 100%);
+      border-color: rgba(167, 139, 250, 0.5);
+      box-shadow: 0 0 20px rgba(167, 139, 250, 0.2);
+    }
+
+    /* Mobile responsive header */
+    @media(max-width: 900px) {
+      .game-header {
+        padding: 0 20px;
+        height: 60px;
+      }
+      
+      .logo-text {
+        font-size: 1rem;
+      }
+      
+      .header-nav {
+        gap: 10px;
+      }
+      
+      .nav-link {
+        font-size: 12px;
+        padding: 6px 10px;
+      }
+    }
+
+    body {
+      background: #0a0f1a;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      color: #e2e8f0;
+      padding-top: 90px;
+    }
+    #gameContainer {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #g {
+      display: block;
+      image-rendering: crisp-edges;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+    .ui-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .score-display {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #00ffff;
+      text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+    }
+    .wave-display {
+      font-family: 'Orbitron', monospace;
+      font-size: 1rem;
+      color: #a78bfa;
+    }
+    .lives-display {
+      display: flex;
+      gap: 8px;
+    }
+    .life-icon {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: #00ffff;
+      stroke-width: 2;
+    }
+    .menu-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 15, 26, 0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      backdrop-filter: blur(10px);
+    }
+    .menu-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 3rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #00ffff 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 2rem;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+    }
+    .menu-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: 280px;
+    }
+    .menu-btn {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      color: #e2e8f0;
+      padding: 1rem 2rem;
+      border-radius: 12px;
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .menu-btn:hover {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.4) 0%, rgba(139, 92, 246, 0.4) 100%);
+      border-color: rgba(96, 165, 250, 0.6);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+    }
+    .menu-btn.primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      border: none;
+    }
+    .menu-btn.primary:hover {
+      box-shadow: 0 10px 40px rgba(59, 130, 246, 0.5);
+    }
+    .shop-panel, .leaderboard-panel, .ranked-panel {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(15, 23, 42, 0.98);
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      border-radius: 20px;
+      padding: 2rem;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      pointer-events: auto;
+      backdrop-filter: blur(20px);
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .panel-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.5rem;
+      color: #f8fafc;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      color: #64748b;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: color 0.3s;
+    }
+    .close-btn:hover { color: #e2e8f0; }
+    .shop-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 12px;
+      margin-bottom: 0.75rem;
+      border: 1px solid rgba(148, 163, 184, 0.1);
+    }
+    .shop-item.owned {
+      border-color: rgba(34, 197, 94, 0.3);
+      background: rgba(34, 197, 94, 0.1);
+    }
+    .shop-item-info h4 {
+      color: #f8fafc;
+      margin-bottom: 0.25rem;
+    }
+    .shop-item-info p {
+      color: #64748b;
+      font-size: 0.875rem;
+    }
+    .shop-item-price {
+      font-family: 'Orbitron', monospace;
+      color: #fbbf24;
+      font-weight: 600;
+    }
+    .shop-item-owned {
+      color: #22c55e;
+      font-weight: 600;
+    }
+    .pearl-balance {
+      font-family: 'Orbitron', monospace;
+      color: #fbbf24;
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .leaderboard-entry {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+    .leaderboard-rank {
+      font-family: 'Orbitron', monospace;
+      font-weight: 700;
+      width: 40px;
+      color: #60a5fa;
+    }
+    .leaderboard-rank.top3 {
+      color: #fbbf24;
+    }
+    .leaderboard-name {
+      flex: 1;
+      color: #e2e8f0;
+    }
+    .leaderboard-score {
+      font-family: 'Orbitron', monospace;
+      color: #00ffff;
+    }
+    .hidden { display: none !important; }
+    .show { display: block !important; }
+  </style>
+</head>
+<body>
+  <!-- Modern Game Header -->
+  <header class="game-header">
+    <a href="/" class="header-logo">
+      <span class="logo-icon">🚀</span>
+      <span class="logo-text">NOVA SIEGE</span>
+    </a>
+    <nav class="header-nav">
+      <a href="/deep-dive" class="nav-link">🤿 Deep Dive</a>
+      <a href="/pool" class="nav-link">🎱 Pool</a>
+      <a href="/night-drive" class="nav-link">🏎️ Night Drive</a>
+      <a href="/space-shooter" class="nav-link nav-home">🚀 Nova Siege</a>
+    </nav>
+  </header>
+
+  <div id="gameContainer">
+    <canvas id="g" width="680" height="500" tabindex="0"></canvas>
+    
+    <!-- Main Menu -->
+    <div id="mainMenu" class="menu-overlay">
+      <h1 class="menu-title">NOVA SIEGE</h1>
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <p style="color: #64748b; font-size: 0.875rem;">High Score</p>
+        <p id="menuHighScore" style="font-family: 'Orbitron', monospace; font-size: 1.5rem; color: #fbbf24;">0</p>
+        <p style="color: #64748b; font-size: 0.75rem; margin-top: 0.25rem;">🐚 <span id="menuPearls">0</span> Pearls</p>
+      </div>
+      <div class="menu-buttons">
+        <button class="menu-btn primary" onclick="startGame()">Play</button>
+        <button class="menu-btn" onclick="showRanked()">Ranked Match</button>
+        <button class="menu-btn" onclick="showShop()">Shop</button>
+        <button class="menu-btn" onclick="showLeaderboard()">Leaderboard</button>
+        <button class="menu-btn" onclick="location.href='../landing.html'">Exit</button>
+      </div>
+      <p style="margin-top: 2rem; color: #64748b; font-size: 0.875rem;">
+        WASD / Arrows to Move • Auto-Fire • Boss every 5 waves
+      </p>
+    </div>
+    
+    <!-- Game Over Menu -->
+    <div id="gameOverMenu" class="menu-overlay hidden">
+      <h1 class="menu-title" style="font-size: 2.5rem;">GAME OVER</h1>
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <p style="color: #64748b; margin-bottom: 0.5rem;">Final Score</p>
+        <p id="finalScore" style="font-family: 'Orbitron', monospace; font-size: 2rem; color: #00ffff;">0</p>
+        <p style="color: #64748b; margin-top: 1rem; margin-bottom: 0.5rem;">Wave Reached</p>
+        <p id="finalWave" style="font-family: 'Orbitron', monospace; font-size: 1.5rem; color: #a78bfa;">1</p>
+        <p id="pearlsEarned" style="color: #fbbf24; margin-top: 1rem; font-weight: 600;"></p>
+      </div>
+      <div class="menu-buttons">
+        <button class="menu-btn primary" onclick="startGame()">Play Again</button>
+        <button class="menu-btn" onclick="showMainMenu()">Main Menu</button>
+      </div>
+    </div>
+    
+    <!-- Pause Menu -->
+    <div id="pauseMenu" class="menu-overlay hidden">
+      <h1 class="menu-title" style="font-size: 2.5rem;">PAUSED</h1>
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <p style="color: #64748b; margin-bottom: 0.5rem;">Current Score</p>
+        <p id="pauseScore" style="font-family: 'Orbitron', monospace; font-size: 2rem; color: #00ffff;">0</p>
+        <p style="color: #64748b; margin-top: 1rem; margin-bottom: 0.5rem;">Wave</p>
+        <p id="pauseWave" style="font-family: 'Orbitron', monospace; font-size: 1.5rem; color: #a78bfa;">1</p>
+        <p style="color: #64748b; margin-top: 1rem; font-size: 0.875rem;">ESC or P to Resume</p>
+      </div>
+      <div class="menu-buttons">
+        <button class="menu-btn primary" onclick="togglePause()">Resume</button>
+        <button class="menu-btn" onclick="quitGame()">Quit & Save</button>
+      </div>
+    </div>
+    
+    <!-- Shop Panel -->
+    <div id="shopPanel" class="shop-panel">
+      <div class="panel-header">
+        <h2 class="panel-title">🛒 Shop</h2>
+        <button class="close-btn" onclick="hideShop()">&times;</button>
+      </div>
+      <div class="pearl-balance">🐚 <span id="shopPearls">0</span> Pearls</div>
+      <div id="shopItems"></div>
+    </div>
+    
+    <!-- Leaderboard Panel -->
+    <div id="leaderboardPanel" class="leaderboard-panel">
+      <div class="panel-header">
+        <h2 class="panel-title">🏆 Leaderboard</h2>
+        <button class="close-btn" onclick="hideLeaderboard()">&times;</button>
+      </div>
+      <div id="leaderboardList"></div>
+    </div>
+    
+    <!-- Ranked Panel -->
+    <div id="rankedPanel" class="ranked-panel">
+      <div class="panel-header">
+        <h2 class="panel-title">⚔️ Ranked Match</h2>
+        <button class="close-btn" onclick="hideRanked()">&times;</button>
+      </div>
+      <div style="text-align: center; padding: 2rem;">
+        <p style="color: #64748b; margin-bottom: 1rem;">Current Rank</p>
+        <div id="currentRank" style="font-family: 'Orbitron', monospace; font-size: 1.5rem; color: #a78bfa; margin-bottom: 1rem;">Unranked</div>
+        <p id="rankedMMR" style="color: #60a5fa; margin-bottom: 2rem;">MMR: 0</p>
+        <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 2rem;">
+          Survive as many waves as possible.<br>
+          Higher waves = More MMR points!
+        </p>
+        <button class="menu-btn primary" onclick="startRankedGame()" style="width: 100%;">Start Ranked Match</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Game Constants
+    const C = document.getElementById('g');
+    const ctx = C.getContext('2d');
+    const W = 680, H = 500;
+    
+    // Offscreen canvas for bloom effects
+    const BC = document.createElement('canvas');
+    BC.width = W; BC.height = H;
+    const bx = BC.getContext('2d');
+    
+    // Utility functions
+    const rn = (a, b) => a + (b - a) * Math.random();
+    const cl = (v, a, b) => v < a ? a : v > b ? b : v;
+    function h2r(h) {
+      if (h.length === 4) h = '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3];
+      return [parseInt(h.slice(1, 3), 16) || 0, parseInt(h.slice(3, 5), 16) || 0, parseInt(h.slice(5, 7), 16) || 0];
+    }
+    
+    // Shop & Progress System
+    const SpaceShooterData = {
+      pearls: parseInt(localStorage.getItem('ss_pearls') || '0'),
+      inventory: JSON.parse(localStorage.getItem('ss_inventory') || '["default"]'),
+      equipped: localStorage.getItem('ss_equipped') || 'default',
+      highScore: parseInt(localStorage.getItem('ss_highScore') || '0'),
+      rankedMMR: parseInt(localStorage.getItem('ss_mmr') || '0'),
+      rankedWins: parseInt(localStorage.getItem('ss_wins') || '0'),
+      rankedLosses: parseInt(localStorage.getItem('ss_losses') || '0'),
+      
+      save() {
+        localStorage.setItem('ss_pearls', this.pearls);
+        localStorage.setItem('ss_inventory', JSON.stringify(this.inventory));
+        localStorage.setItem('ss_equipped', this.equipped);
+        localStorage.setItem('ss_highScore', this.highScore);
+        localStorage.setItem('ss_mmr', this.rankedMMR);
+        localStorage.setItem('ss_wins', this.rankedWins);
+        localStorage.setItem('ss_losses', this.rankedLosses);
+      },
+      
+      addPearls(amount) {
+        this.pearls += amount;
+        this.save();
+        updateShopDisplay();
+      },
+      
+      canAfford(price) {
+        return this.pearls >= price;
+      },
+      
+      buyItem(id, price) {
+        if (this.canAfford(price) && !this.inventory.includes(id)) {
+          this.pearls -= price;
+          this.inventory.push(id);
+          this.save();
+          return true;
+        }
+        return false;
+      },
+      
+      equipItem(id) {
+        if (this.inventory.includes(id)) {
+          this.equipped = id;
+          this.save();
+          return true;
+        }
+        return false;
+      },
+      
+      updateRanked(wave) {
+        // MMR calculation based on waves survived
+        const basePoints = wave * 10;
+        const bonus = wave >= 10 ? 50 : wave >= 5 ? 20 : 0;
+        const total = basePoints + bonus;
+        this.rankedMMR += total;
+        this.rankedWins++;
+        this.save();
+      }
+    };
+    
+    // Shop Items
+    const shopItems = [
+      { id: 'default', name: 'Standard Ship', desc: 'Default fighter', price: 0, color: '#00ffff' },
+      { id: 'crimson', name: 'Crimson Wing', desc: 'Red hot speedster', price: 500, color: '#ff4444' },
+      { id: 'emerald', name: 'Emerald Star', desc: 'Balanced defense', price: 750, color: '#44ff44' },
+      { id: 'golden', name: 'Golden Comet', desc: 'High score multiplier', price: 1000, color: '#ffcc00' },
+      { id: 'void', name: 'Void Reaper', desc: 'Dark matter infused', price: 1500, color: '#aa44ff' },
+      { id: 'plasma', name: 'Plasma Storm', desc: 'Dual fire cannons', price: 2000, color: '#ff8800' },
+    ];
+    
+    // Stars
+    let ST = [];
+    function initST() {
+      ST = [];
+      for (let i = 0; i < 220; i++) {
+        const l = Math.random() < .18 ? 0 : Math.random() < .5 ? 1 : 2;
+        ST.push({ x: rn(0, W), y: rn(0, H), sp: [.07, .2, .52][l], sz: [.35, .85, 1.7][l], al: rn(.2, 1), tw: rn(0, 6.28) });
+      }
+    }
+    initST();
+    
+    const NB = [{ x: 155, y: 105, ra: 265, h: 230 }, { x: 535, y: 255, ra: 225, h: 268 }, { x: 340, y: 395, ra: 215, h: 202 }, { x: 88, y: 358, ra: 195, h: 318 }];
+    
+    // Particles
+    let PS = [];
+    function sp(x, y, n, o = {}) {
+      const { c = ['#ff6600', '#ffaa00'], s = 3, l = 40, z = 3, a = 6.28, d = 0, g = .1, dr = .95, gl = false } = o;
+      for (let i = 0; i < n; i++) {
+        const ang = d + (Math.random() - .5) * a, spd = rn(s * .3, s);
+        PS.push({ x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, l: rn(l * .5, l), ml: l, c: c[0 | Math.random() * c.length], z: rn(z * .4, z), g, dr, gl });
+      }
+    }
+    
+    // Game State
+    let keys = {}, gs = 'start', score = 0, combo = 0, cbT = 0, wn = 1, sk = 0, tk = 0;
+    let eQ = [], eLft = 0, sTmr = 0;
+    let pl = 3, sh = 100, inv = 0, pfc = 0, px = W / 2, py = H * .8;
+    let BL = [], EB = [], EN = [], EX = [];
+    let isRanked = false;
+    let gameLoopId = null;
+    
+    const ET = [
+      { w: 16, h: 16, hp: 1, sp: 1.5, col: '#ff3333', sc: 100, fr: 0 },
+      { w: 22, h: 20, hp: 3, sp: 1.0, col: '#ff9900', sc: 250, fr: 85 },
+      { w: 36, h: 28, hp: 8, sp: 0.6, col: '#aa44ff', sc: 500, fr: 60 },
+      { w: 80, h: 60, hp: 60, sp: 0.3, col: '#ff0066', sc: 5000, fr: 28 }
+    ];
+    
+    function mk(t) {
+      const e = ET[t];
+      return { x: rn(50, W - 50), y: -55, t, w: e.w, h: e.h, hp: e.hp, mhp: e.hp, sp: e.sp, col: e.col, sc: e.sc, fr: e.fr, vx: t === 2 ? (Math.random() < .5 ? 1.2 : -1.2) : 0, fc: rn(0, e.fr || 1), ph: 0, zt: 0, dead: false };
+    }
+    
+    function boom(x, y, s = 1) {
+      EX.push({ x, y, r: 0, mr: 60 * s, li: 30, t: 'ring' });
+      EX.push({ x, y, r: 0, mr: 80 * s, li: 15, t: 'flash' });
+      sp(x, y, Math.ceil(25 * s), { c: ['#ff6600', '#ff9900', '#ffcc00', '#ffffff', '#ff3300'], s: 5 * s, l: 55, z: 4 * s, a: 6.28, g: .05, dr: .92, gl: true });
+      sp(x, y, 8, { c: ['#777777', '#aaaaaa', '#555555'], s: 2, l: 80, z: 2, g: .15, dr: .97 });
+      sk = cl(sk + 8 * s, 0, 20);
+    }
+    
+    function loseL() {
+      pl--; sh = 100; inv = 180; boom(px, py, 2);
+      if (pl <= 0) {
+        endGame();
+      }
+    }
+    
+    function endGame() {
+      gs = 'over';
+      cancelAnimationFrame(gameLoopId);
+      
+      // Calculate pearls earned
+      const pearlReward = Math.floor(score / 500);
+      SpaceShooterData.addPearls(pearlReward);
+      
+      // Update high score
+      if (score > SpaceShooterData.highScore) {
+        SpaceShooterData.highScore = score;
+        SpaceShooterData.save();
+      }
+      
+      // Update ranked if applicable
+      if (isRanked) {
+        SpaceShooterData.updateRanked(wn);
+      }
+      
+      // Show game over menu
+      document.getElementById('finalScore').textContent = score.toLocaleString();
+      document.getElementById('finalWave').textContent = wn;
+      const pearlText = pearlReward > 0 ? `+${pearlReward} 🐚 Pearls Earned!` : '';
+      document.getElementById('pearlsEarned').textContent = pearlText;
+      
+      document.getElementById('mainMenu').classList.add('hidden');
+      document.getElementById('gameOverMenu').classList.remove('hidden');
+    }
+    
+    // Get current ship color from equipped item
+    function getShipColor() {
+      const item = shopItems.find(i => i.id === SpaceShooterData.equipped);
+      return item ? item.color : '#00ffff';
+    }
+    
+    function dPlayer(x, y, al = 1) {
+      const shipColor = getShipColor();
+      ctx.save(); ctx.translate(x, y); ctx.globalAlpha = al;
+      
+      // Ship body
+      ctx.beginPath();
+      ctx.moveTo(0, -28); ctx.lineTo(11, 11); ctx.lineTo(5.5, 8);
+      ctx.lineTo(0, 20); ctx.lineTo(-5.5, 8); ctx.lineTo(-11, 11);
+      ctx.closePath();
+      ctx.fillStyle = '#0d1a2a'; ctx.fill();
+      ctx.strokeStyle = shipColor; ctx.lineWidth = 1.5; ctx.stroke();
+      
+      // Cockpit
+      ctx.beginPath();
+      ctx.moveTo(0, -15); ctx.lineTo(4.4, 1); ctx.lineTo(0, 4);
+      ctx.lineTo(-4.4, 1); ctx.closePath();
+      ctx.fillStyle = '#001a44'; ctx.fill();
+      ctx.strokeStyle = shipColor; ctx.lineWidth = 1; ctx.stroke();
+      
+      // Wings
+      ctx.strokeStyle = shipColor + '44'; ctx.lineWidth = .7;
+      ctx.beginPath(); ctx.moveTo(5.5, 0); ctx.lineTo(15.5, 9); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-5.5, 0); ctx.lineTo(-15.5, 9); ctx.stroke();
+      
+      // Engine glow
+      ctx.beginPath(); ctx.arc(0, -25, 2.5, 0, 6.28); ctx.fillStyle = '#ffffff'; ctx.fill();
+      ctx.globalAlpha = 1; ctx.restore();
+    }
+    
+    function dEnemy(e) {
+      ctx.save(); ctx.translate(e.x, e.y);
+      const hr = e.hp / e.mhp;
+      if (e.t === 0) {
+        ctx.beginPath(); ctx.moveTo(0, -e.h / 2); ctx.lineTo(e.w / 2, 0); ctx.lineTo(0, e.h / 2); ctx.lineTo(-e.w / 2, 0); ctx.closePath();
+        ctx.fillStyle = '#220000'; ctx.fill(); ctx.strokeStyle = e.col; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, 4, 0, 6.28); ctx.fillStyle = e.col; ctx.fill();
+        ctx.beginPath(); ctx.arc(0, 0, 2, 0, 6.28); ctx.fillStyle = '#fff'; ctx.fill();
+      } else if (e.t === 1) {
+        ctx.beginPath(); ctx.moveTo(0, -e.h / 2); ctx.lineTo(e.w / 2, e.h * .3); ctx.lineTo(e.w * .2, e.h * .1); ctx.lineTo(0, e.h / 2); ctx.lineTo(-e.w * .2, e.h * .1); ctx.lineTo(-e.w / 2, e.h * .3); ctx.closePath();
+        ctx.fillStyle = '#221100'; ctx.fill(); ctx.strokeStyle = e.col; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, e.h * .28, 4, 0, 6.28); ctx.fillStyle = '#ff5500'; ctx.fill();
+      } else if (e.t === 2) {
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) { const a = i / 6 * 6.28 - 1.57; i === 0 ? ctx.moveTo(Math.cos(a) * e.w / 2, Math.sin(a) * e.h / 2) : ctx.lineTo(Math.cos(a) * e.w / 2, Math.sin(a) * e.h / 2); }
+        ctx.closePath(); ctx.fillStyle = '#110022'; ctx.fill(); ctx.strokeStyle = e.col; ctx.lineWidth = 2; ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, 8, 0, 6.28); ctx.strokeStyle = e.col + '88'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, 6.28); ctx.fillStyle = e.col; ctx.fill();
+      } else {
+        ctx.rotate(Math.sin(tk * .022) * .04);
+        ctx.beginPath();
+        ctx.moveTo(0, -e.h / 2); ctx.lineTo(e.w * .3, -e.h * .15); ctx.lineTo(e.w / 2, e.h * .1); ctx.lineTo(e.w * .3, e.h * .25); ctx.lineTo(e.w * .58, e.h / 2); ctx.lineTo(0, e.h * .35); ctx.lineTo(-e.w * .58, e.h / 2); ctx.lineTo(-e.w * .3, e.h * .25); ctx.lineTo(-e.w / 2, e.h * .1); ctx.lineTo(-e.w * .3, -e.h * .15); ctx.closePath();
+        ctx.fillStyle = '#200010'; ctx.fill(); ctx.strokeStyle = e.col; ctx.lineWidth = 2.5; ctx.stroke();
+        const pu = .7 + .3 * Math.sin(tk * .09);
+        ctx.beginPath(); ctx.arc(0, 0, 12 * pu, 0, 6.28); ctx.fillStyle = e.col; ctx.fill();
+        ctx.beginPath(); ctx.arc(0, 0, 6, 0, 6.28); ctx.fillStyle = '#ffffff'; ctx.fill();
+        ctx.save(); ctx.rotate(tk * .045);
+        ctx.beginPath(); ctx.arc(0, 0, 22, 0, 6.28); ctx.strokeStyle = e.col; ctx.lineWidth = 1; ctx.setLineDash([4, 8]); ctx.stroke(); ctx.setLineDash([]);
+        ctx.restore();
+      }
+      if (e.t > 0 && hr < 1) {
+        const bw = e.w * 1.3;
+        ctx.fillStyle = '#222'; ctx.fillRect(-bw / 2, -e.h / 2 - 12, bw, 4);
+        ctx.fillStyle = hr > .5 ? '#00ff88' : hr > .25 ? '#ffaa00' : '#ff3333';
+        ctx.fillRect(-bw / 2, -e.h / 2 - 12, bw * hr, 4);
+      }
+      ctx.restore();
+    }
+    
+    function drawBloom() {
+      bx.clearRect(0, 0, W, H);
+      const shipColor = getShipColor();
+      const [r, g, b] = h2r(shipColor);
+      
+      // Engine glow
+      let eg = bx.createRadialGradient(px, py + 14, 0, px, py + 14, 30);
+      eg.addColorStop(0, 'rgba(255,140,0,.95)'); eg.addColorStop(1, 'rgba(255,50,0,0)');
+      bx.fillStyle = eg; bx.beginPath(); bx.arc(px, py + 14, 30, 0, 6.28); bx.fill();
+      
+      // Player glow
+      eg = bx.createRadialGradient(px, py, 0, px, py, 42);
+      eg.addColorStop(0, `rgba(${r},${g},${b},.14)`); eg.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      bx.fillStyle = eg; bx.beginPath(); bx.arc(px, py, 42, 0, 6.28); bx.fill();
+      
+      // Bullets
+      BL.forEach(b => {
+        const g = bx.createRadialGradient(b.x, b.y, 0, b.x, b.y, 13);
+        g.addColorStop(0, 'rgba(0,255,255,.95)'); g.addColorStop(1, 'rgba(0,200,255,0)');
+        bx.fillStyle = g; bx.beginPath(); bx.arc(b.x, b.y, 13, 0, 6.28); bx.fill();
+      });
+      
+      // Enemy bullets
+      EB.forEach(b => {
+        const [r, g, bl] = h2r(b.col);
+        const gr = bx.createRadialGradient(b.x, b.y, 0, b.x, b.y, 11);
+        gr.addColorStop(0, `rgba(${r},${g},${bl},.9)`); gr.addColorStop(1, `rgba(${r},${g},${bl},0)`);
+        bx.fillStyle = gr; bx.beginPath(); bx.arc(b.x, b.y, 11, 0, 6.28); bx.fill();
+      });
+      
+      // Enemy glows
+      EN.forEach(e => {
+        const [r, g, b] = h2r(e.col);
+        const ng = bx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.w * 1.1);
+        ng.addColorStop(0, `rgba(${r},${g},${b},.55)`); ng.addColorStop(1, `rgba(${r},${g},${b},0)`);
+        bx.fillStyle = ng; bx.beginPath(); bx.arc(e.x, e.y, e.w * 1.1, 0, 6.28); bx.fill();
+      });
+      
+      // Particles
+      PS.filter(p => p.gl).forEach(p => {
+        const pa = p.l / p.ml;
+        const [r, g, b] = h2r(p.c.length === 4 ? '#' + p.c[1] + p.c[1] + p.c[2] + p.c[2] + p.c[3] + p.c[3] : p.c);
+        const gr = bx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.z * 3.2);
+        gr.addColorStop(0, `rgba(${r},${g},${b},${pa * .75})`); gr.addColorStop(1, `rgba(${r},${g},${b},0)`);
+        bx.fillStyle = gr; bx.beginPath(); bx.arc(p.x, p.y, p.z * 3.2, 0, 6.28); bx.fill();
+      });
+      
+      // Explosions
+      EX.forEach(e => {
+        if (e.t === 'ring' && e.r > 0) {
+          bx.strokeStyle = `rgba(255,130,0,${e.li / 30 * .8})`; bx.lineWidth = 10;
+          bx.beginPath(); bx.arc(e.x, e.y, e.r, 0, 6.28); bx.stroke();
+        } else if (e.t === 'flash' && e.r > 0) {
+          const g = bx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r);
+          g.addColorStop(0, `rgba(255,210,120,${e.li / 15 * .85})`); g.addColorStop(1, 'rgba(255,80,0,0)');
+          bx.fillStyle = g; bx.beginPath(); bx.arc(e.x, e.y, e.r, 0, 6.28); bx.fill();
+        }
+      });
+      
+      ctx.save(); ctx.filter = 'blur(11px)'; ctx.globalCompositeOperation = 'screen'; ctx.drawImage(BC, 0, 0); ctx.restore();
+    }
+    
+    function drawBG() {
+      ctx.fillStyle = '#07071a'; ctx.fillRect(0, 0, W, H);
+      NB.forEach(n => {
+        const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.ra);
+        g.addColorStop(0, `hsla(${n.h},70%,22%,.09)`); g.addColorStop(.55, `hsla(${n.h},70%,18%,.04)`); g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(n.x, n.y, n.ra, 0, 6.28); ctx.fill();
+      });
+      ST.forEach(s => {
+        s.y += s.sp; if (s.y > H) { s.y = 0; s.x = rn(0, W); }
+        s.tw += .038; const a = s.al * (.68 + .32 * Math.sin(s.tw));
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.sz, 0, 6.28); ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.fill();
+      });
+      const vg = ctx.createRadialGradient(W / 2, H / 2, H * .22, W / 2, H / 2, H * .75);
+      vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.5)');
+      ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    }
+    
+    function drawScene() {
+      EX.forEach(e => {
+        if (e.t === 'ring' && e.r > 0) {
+          ctx.save(); ctx.strokeStyle = `rgba(255,120,0,${e.li / 30})`; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, 6.28); ctx.stroke(); ctx.restore();
+        }
+      });
+      EN.forEach(e => dEnemy(e));
+      EB.forEach(b => {
+        ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(Math.atan2(b.vy, b.vx) + 1.57);
+        ctx.fillStyle = b.col; ctx.beginPath(); ctx.ellipse(0, 0, 3, 9, 0, 0, 6.28); ctx.fill(); ctx.restore();
+      });
+      if (inv <= 0 || Math.floor(inv / 6) % 2 === 0) dPlayer(px, py);
+      BL.forEach(b => {
+        ctx.save(); ctx.translate(b.x, b.y);
+        ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.ellipse(0, 0, 3, 7, 0, 0, 6.28); ctx.fill();
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, -7, 2.5, 0, 6.28); ctx.fill(); ctx.restore();
+      });
+      EX.forEach(e => {
+        if (e.t === 'flash' && e.r > 0) {
+          ctx.save(); ctx.globalAlpha = e.li / 15 * .45; ctx.fillStyle = '#ffaa44';
+          ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, 6.28); ctx.fill(); ctx.restore();
+        }
+      });
+      PS.forEach(p => {
+        const a = p.l / p.ml; ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = p.c;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.z * a, 0, 6.28); ctx.fill(); ctx.restore();
+      });
+    }
+    
+    function drawHUD() {
+      ctx.save();
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 20px Orbitron, monospace'; ctx.textAlign = 'left';
+      ctx.fillText(String(score).padStart(8, '0'), 16, 30);
+      ctx.fillStyle = '#555555'; ctx.font = '10px monospace'; ctx.fillText('SCORE', 16, 44);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px Orbitron, monospace'; ctx.textAlign = 'center';
+      ctx.fillText('WAVE ' + wn, W / 2, 22);
+      // High Score display
+      ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 12px Orbitron, monospace'; ctx.textAlign = 'right';
+      ctx.fillText('HI: ' + SpaceShooterData.highScore.toLocaleString(), W - 16, 44);
+      const boss = EN.find(e => e.t === 3);
+      if (boss) {
+        const bw = 300;
+        ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(W / 2 - bw / 2 - 3, 36, bw + 6, 18);
+        ctx.fillStyle = '#2a0010'; ctx.fillRect(W / 2 - bw / 2, 40, bw, 10);
+        const bc = boss.hp / boss.mhp;
+        ctx.fillStyle = bc > .5 ? '#ff0066' : bc > .25 ? '#ff6600' : '#ff3300';
+        ctx.fillRect(W / 2 - bw / 2, 40, bw * bc, 10);
+        ctx.strokeStyle = '#ff006644'; ctx.lineWidth = 1; ctx.strokeRect(W / 2 - bw / 2, 40, bw, 10);
+        ctx.fillStyle = '#ff8899'; ctx.font = '8px monospace'; ctx.fillText('BOSS', W / 2, 38);
+      }
+      for (let i = 0; i < pl; i++) {
+        ctx.save(); ctx.translate(W - 18 - i * 24, 18);
+        ctx.strokeStyle = getShipColor(); ctx.fillStyle = '#0a1a2a'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(6, 5); ctx.lineTo(0, 2); ctx.lineTo(-6, 5); ctx.closePath();
+        ctx.fill(); ctx.stroke(); ctx.restore();
+      }
+      ctx.fillStyle = '#1a1a1a'; ctx.fillRect(16, H - 26, 124, 10);
+      const sr = sh / 100;
+      ctx.fillStyle = sr > .6 ? '#00ff88' : sr > .3 ? '#ffaa00' : '#ff3333';
+      ctx.fillRect(17, H - 25, 122 * sr, 8);
+      ctx.strokeStyle = '#333333'; ctx.lineWidth = .5; ctx.strokeRect(16, H - 26, 124, 10);
+      ctx.fillStyle = '#555555'; ctx.font = '10px monospace'; ctx.textAlign = 'left'; ctx.fillText('SHIELDS', 16, H - 30);
+      if (combo > 1) {
+        const ca = Math.min(1, cbT / 28); ctx.globalAlpha = ca;
+        ctx.fillStyle = '#ffcc00'; ctx.font = `bold ${12 + Math.min(combo, 8)}px monospace`; ctx.textAlign = 'right';
+        ctx.fillText('×' + combo + ' COMBO', W - 14, H - 14);
+      }
+      ctx.restore();
+    }
+    
+    function doWave() {
+      const pool = wn < 3 ? [0] : wn < 5 ? [0, 0, 1] : wn < 8 ? [0, 1, 2] : [0, 1, 1, 2];
+      const cnt = 5 + wn * 2;
+      for (let i = 0; i < cnt; i++) eQ.push({ t: pool[0 | Math.random() * pool.length], d: i * 22 });
+      if (wn % 5 === 0) eQ.push({ t: 3, d: cnt * 22 + 80 });
+      eLft = eQ.length;
+    }
+    
+    function update() {
+      tk++; if (gs !== 'play') return;
+      sk *= .83; if (cbT > 0) cbT--; else combo = 0;
+      if (tk % 200 === 0 && inv <= 0 && sh < 100) sh = Math.min(100, sh + 8);
+      if ((keys.ArrowLeft || keys.a || keys.A) && px > 22 + 3) px -= 4.5;
+      if ((keys.ArrowRight || keys.d || keys.D) && px < W - 22 - 3) px += 4.5;
+      if ((keys.ArrowUp || keys.w || keys.W) && py > H * .22) py -= 4.5;
+      if ((keys.ArrowDown || keys.s || keys.S) && py < H - 28 - 3) py += 4.5;
+      if (pfc-- <= 0) {
+        BL.push({ x: px, y: py - 28, vy: -9, li: 70 });
+        pfc = 7;
+      }
+      if (tk % 2 === 0) sp(px, py + 14, 2, { c: ['#ff6600', '#ffaa00', '#ff3300'], s: 1.5, l: 18, z: 2.5, a: .3, d: 1.57, g: 0, dr: .91, gl: true });
+      sTmr++;
+      if (eQ.length && sTmr >= eQ[0].d) { EN.push(mk(eQ.shift().t)); sTmr = 0; }
+      if (!EN.length && !eQ.length && eLft > 0) { wn++; eLft = 0; doWave(); }
+      EN.forEach(e => {
+        e.y += e.sp;
+        if (e.t === 2) { e.zt++; if (e.zt > 55) { e.vx *= -1; e.zt = 0; } e.x = cl(e.x + e.vx, 30, W - 30); }
+        else if (e.t === 3) { e.ph++; e.x = W / 2 + Math.sin(e.ph * .018) * (W * .37); if (e.y > 115) e.y = 115; }
+        else if (e.t === 1) e.x += (px - e.x) * .007;
+        if (e.fr > 0 && --e.fc <= 0) {
+          const dx = px - e.x, dy = py - e.y, d = Math.hypot(dx, dy), bsp = e.t === 3 ? 3.8 : 2.7;
+          EB.push({ x: e.x, y: e.y, vx: dx / d * bsp, vy: dy / d * bsp, li: 95, col: e.col });
+          if (e.t === 3) {
+            [-0.32, .32].forEach(off => {
+              const c = Math.cos(off), sn = Math.sin(off);
+              EB.push({ x: e.x, y: e.y, vx: (dx / d * c - dy / d * sn) * bsp, vy: (dx / d * sn + dy / d * c) * bsp, li: 95, col: e.col });
+            });
+          }
+          e.fc = e.fr + rn(0, 30);
+        }
+        if (tk % 5 === 0) sp(e.x, e.y - e.h * .3, 1, { c: [e.col], s: .4, l: 12, z: 1.5, a: .15, d: -1.57, g: 0, dr: .9 });
+      });
+      BL = BL.filter(b => { b.y += b.vy; b.li--; return b.li > 0 && b.y > -20; });
+      EB = EB.filter(b => { b.x += b.vx; b.y += b.vy; b.li--; return b.li > 0 && b.y < H + 20; });
+      BL.forEach(b => {
+        EN.forEach(e => {
+          if (!e.dead && Math.abs(b.x - e.x) < e.w * .52 + 4 && Math.abs(b.y - e.y) < e.h * .52 + 4) {
+            b.li = 0; e.hp--;
+            sp(b.x, b.y, 5, { c: ['#ffffff', '#00ffff', '#0088ff'], s: 2, l: 18, z: 2, g: 0, dr: .9 });
+            if (e.hp <= 0) { boom(e.x, e.y, e.t === 3 ? 3 : e.w > 25 ? 1.5 : 1); combo++; cbT = 120; score += e.sc * Math.max(1, combo); e.dead = true; }
+          }
+        });
+      });
+      BL = BL.filter(b => b.li > 0);
+      EN = EN.filter(e => !e.dead && e.y < H + 65);
+      if (inv <= 0) {
+        EB.forEach(b => {
+          if (Math.abs(b.x - px) < 16 && Math.abs(b.y - py) < 20) {
+            sh -= 25; b.li = 0; sk = Math.max(sk, 10);
+            sp(px, py, 8, { c: ['#00ffff', '#0088ff', '#ffffff'], s: 3, l: 28, z: 3 });
+            if (sh <= 0) loseL();
+          }
+        });
+        EB = EB.filter(b => b.li > 0);
+        EN.forEach(e => {
+          if (!e.dead && Math.hypot(e.x - px, e.y - py) < e.w * .55 + 12) {
+            sh -= 50; boom(e.x, e.y, 1.2); e.dead = true; inv = 90; sk = 14;
+            if (sh <= 0) loseL();
+          }
+        });
+      } else inv--;
+      PS = PS.filter(p => { p.x += p.vx; p.y += p.vy; p.vy += p.g; p.vx *= p.dr; p.vy *= p.dr; p.l--; return p.l > 0; });
+      EX = EX.filter(e => { e.li--; e.r = e.mr * (1 - e.li / (e.t === 'flash' ? 15 : 30)); return e.li > 0; });
+    }
+    
+    function loop() {
+      update();
+      const sx = sk * (Math.random() * 2 - 1), sy = sk * (Math.random() * 2 - 1);
+      ctx.save(); ctx.translate(sx, sy);
+      drawBG(); drawScene(); drawBloom();
+      ctx.restore();
+      drawHUD();
+      if (gs === 'play') {
+        gameLoopId = requestAnimationFrame(loop);
+      }
+    }
+    
+    // Input
+    document.addEventListener('keydown', e => {
+      keys[e.key] = true;
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+      // Pause toggle with ESC or P
+      if ((e.key === 'Escape' || e.key === 'p' || e.key === 'P') && (gs === 'play' || gs === 'pause')) {
+        e.preventDefault();
+        togglePause();
+      }
+    }, { passive: false });
+    document.addEventListener('keyup', e => keys[e.key] = false);
+    
+    // UI Functions
+    function startGame() {
+      gs = 'play';
+      score = 0; combo = 0; cbT = 0; wn = 1; sk = 0; tk = 0;
+      EN = []; BL = []; EB = []; PS = []; EX = []; eQ = []; eLft = 0; sTmr = 0;
+      px = W / 2; py = H * .8; pl = 3; sh = 100; inv = 0; pfc = 0;
+      isRanked = false;
+      doWave();
+      document.getElementById('mainMenu').classList.add('hidden');
+      document.getElementById('gameOverMenu').classList.add('hidden');
+      C.focus();
+      loop();
+    }
+    
+    function startRankedGame() {
+      hideRanked();
+      gs = 'play';
+      score = 0; combo = 0; cbT = 0; wn = 1; sk = 0; tk = 0;
+      EN = []; BL = []; EB = []; PS = []; EX = []; eQ = []; eLft = 0; sTmr = 0;
+      px = W / 2; py = H * .8; pl = 3; sh = 100; inv = 0; pfc = 0;
+      isRanked = true;
+      doWave();
+      document.getElementById('mainMenu').classList.add('hidden');
+      document.getElementById('gameOverMenu').classList.add('hidden');
+      C.focus();
+      loop();
+    }
+    
+    function showMainMenu() {
+      document.getElementById('gameOverMenu').classList.add('hidden');
+      document.getElementById('pauseMenu').classList.add('hidden');
+      document.getElementById('mainMenu').classList.remove('hidden');
+      // Update high score and pearls display
+      document.getElementById('menuHighScore').textContent = SpaceShooterData.highScore.toLocaleString();
+      document.getElementById('menuPearls').textContent = SpaceShooterData.pearls;
+      gs = 'start';
+    }
+    
+    function togglePause() {
+      if (gs === 'play') {
+        gs = 'pause';
+        document.getElementById('pauseScore').textContent = score.toLocaleString();
+        document.getElementById('pauseWave').textContent = wn;
+        document.getElementById('pauseMenu').classList.remove('hidden');
+      } else if (gs === 'pause') {
+        gs = 'play';
+        document.getElementById('pauseMenu').classList.add('hidden');
+        loop();
+      }
+    }
+    
+    function quitGame() {
+      // Save score, earn pearls, update high score
+      const pearlReward = Math.floor(score / 500);
+      SpaceShooterData.addPearls(pearlReward);
+      
+      // Update high score
+      if (score > SpaceShooterData.highScore) {
+        SpaceShooterData.highScore = score;
+        SpaceShooterData.save();
+      }
+      
+      // Save to leaderboard
+      const scores = JSON.parse(localStorage.getItem('ss_leaderboard') || '[]');
+      scores.push({ score: score, wave: wn, date: new Date().toLocaleDateString() });
+      scores.sort((a, b) => b.score - a.score);
+      localStorage.setItem('ss_leaderboard', JSON.stringify(scores.slice(0, 10)));
+      
+      // Return to main menu
+      document.getElementById('pauseMenu').classList.add('hidden');
+      showMainMenu();
+    }
+    
+    function showShop() {
+      updateShopDisplay();
+      document.getElementById('shopPanel').classList.add('show');
+    }
+    
+    function hideShop() {
+      document.getElementById('shopPanel').classList.remove('show');
+    }
+    
+    function showLeaderboard() {
+      updateLeaderboard();
+      document.getElementById('leaderboardPanel').classList.add('show');
+    }
+    
+    function hideLeaderboard() {
+      document.getElementById('leaderboardPanel').classList.remove('show');
+    }
+    
+    function showRanked() {
+      updateRankedDisplay();
+      document.getElementById('rankedPanel').classList.add('show');
+    }
+    
+    function hideRanked() {
+      document.getElementById('rankedPanel').classList.remove('show');
+    }
+    
+    function updateShopDisplay() {
+      document.getElementById('shopPearls').textContent = SpaceShooterData.pearls;
+      const container = document.getElementById('shopItems');
+      container.innerHTML = '';
+      
+      shopItems.forEach(item => {
+        const isOwned = SpaceShooterData.inventory.includes(item.id);
+        const isEquipped = SpaceShooterData.equipped === item.id;
+        
+        const div = document.createElement('div');
+        div.className = 'shop-item' + (isOwned ? ' owned' : '');
+        div.innerHTML = `
+          <div class="shop-item-info">
+            <h4>${item.name} ${isEquipped ? '(Equipped)' : ''}</h4>
+            <p>${item.desc}</p>
+          </div>
+          <div>
+            ${isOwned 
+              ? (isEquipped ? '<span class="shop-item-owned">Equipped</span>' : `<button class="menu-btn" onclick="equipShip('${item.id}')" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Equip</button>`)
+              : (item.price === 0 ? '<span class="shop-item-owned">Free</span>' : `<span class="shop-item-price">🐚 ${item.price}</span>`)
+            }
+            ${!isOwned && item.price > 0 ? `<button class="menu-btn" onclick="buyShip('${item.id}', ${item.price})" style="padding: 0.5rem 1rem; font-size: 0.875rem; margin-left: 0.5rem;">Buy</button>` : ''}
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+    
+    function buyShip(id, price) {
+      if (SpaceShooterData.buyItem(id, price)) {
+        updateShopDisplay();
+      } else {
+        alert('Not enough pearls!');
+      }
+    }
+    
+    function equipShip(id) {
+      SpaceShooterData.equipItem(id);
+      updateShopDisplay();
+    }
+    
+    function updateLeaderboard() {
+      const scores = JSON.parse(localStorage.getItem('ss_leaderboard') || '[]');
+      scores.sort((a, b) => b.score - a.score);
+      
+      const container = document.getElementById('leaderboardList');
+      container.innerHTML = '';
+      
+      if (scores.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 2rem;">No scores yet. Be the first!</p>';
+        return;
+      }
+      
+      scores.slice(0, 10).forEach((entry, i) => {
+        const div = document.createElement('div');
+        div.className = 'leaderboard-entry';
+        div.innerHTML = `
+          <span class="leaderboard-rank ${i < 3 ? 'top3' : ''}">${i + 1}</span>
+          <span class="leaderboard-name">${entry.name}</span>
+          <span class="leaderboard-score">${entry.score.toLocaleString()}</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+    
+    function updateRankedDisplay() {
+      const mmr = SpaceShooterData.rankedMMR;
+      let rank = 'Unranked';
+      if (mmr >= 2000) rank = 'Legend';
+      else if (mmr >= 1500) rank = 'Master';
+      else if (mmr >= 1000) rank = 'Diamond';
+      else if (mmr >= 700) rank = 'Platinum';
+      else if (mmr >= 400) rank = 'Gold';
+      else if (mmr >= 200) rank = 'Silver';
+      else if (mmr > 0) rank = 'Bronze';
+      
+      document.getElementById('currentRank').textContent = rank;
+      document.getElementById('rankedMMR').textContent = `MMR: ${mmr} | W: ${SpaceShooterData.rankedWins} L: ${SpaceShooterData.rankedLosses}`;
+    }
+    
+    // Save score to leaderboard
+    function saveToLeaderboard(name, score, wave) {
+      let scores = JSON.parse(localStorage.getItem('ss_leaderboard') || '[]');
+      scores.push({ name, score, wave, date: new Date().toISOString() });
+      scores.sort((a, b) => b.score - a.score);
+      scores = scores.slice(0, 50); // Keep top 50
+      localStorage.setItem('ss_leaderboard', JSON.stringify(scores));
+    }
+    
+    // Initialize
+    C.focus();
+    
+    // Initialize menu display
+    document.getElementById('menuHighScore').textContent = SpaceShooterData.highScore.toLocaleString();
+    document.getElementById('menuPearls').textContent = SpaceShooterData.pearls;
+    
+    // Save score on game over
+    const originalEndGame = endGame;
+    endGame = function() {
+      const playerName = localStorage.getItem('abyssal_rush_user') ? 
+        JSON.parse(localStorage.getItem('abyssal_rush_user')).username : 'Guest';
+      saveToLeaderboard(playerName, score, wn);
+      originalEndGame();
+    };
+    
+    // Start loop for background animation
+    gs = 'start';
+    loop();
+  </script>
+  
+  <!-- Vercel Analytics -->
+  <script>
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>

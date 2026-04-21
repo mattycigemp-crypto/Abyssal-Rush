@@ -214,6 +214,139 @@ const Auth = {
 
   getPearls() {
     return this.user?.pearls || 0;
+  },
+
+  // 🛡️ ROLE SYSTEM - Admin/Mod powers
+  getRole() {
+    // Check user role from server data, localStorage override, or default to 'player'
+    const localRole = localStorage.getItem('abyssal_rush_role');
+    if (localRole) return localRole;
+    return this.user?.role || 'player';
+  },
+
+  isAdmin() {
+    return this.getRole() === 'admin';
+  },
+
+  isMod() {
+    return this.getRole() === 'mod' || this.getRole() === 'admin';
+  },
+
+  setRole(role) {
+    // For development/testing - set role in localStorage
+    if (role === 'admin' || role === 'mod' || role === 'player') {
+      localStorage.setItem('abyssal_rush_role', role);
+      // Update user object if exists
+      if (this.user) {
+        this.user.role = role;
+        localStorage.setItem('abyssal_rush_user', JSON.stringify(this.user));
+      }
+      return true;
+    }
+    return false;
+  },
+
+  clearRole() {
+    localStorage.removeItem('abyssal_rush_role');
+  },
+
+  // 🎮 ADMIN COMMANDS
+  async adminGivePearls(amount, targetUsername = null) {
+    if (!this.isMod()) return { success: false, error: 'Unauthorized' };
+    
+    // If no target, give to self
+    if (!targetUsername || targetUsername === this.user?.username) {
+      if (typeof Shop !== 'undefined') {
+        Shop.awardPearls(amount);
+        return { success: true, message: `Gave ${amount} pearls to self` };
+      }
+    }
+    
+    // In a real implementation, this would call the server API
+    console.log(`[ADMIN] Would give ${amount} pearls to ${targetUsername || 'self'}`);
+    return { success: true, message: `[ADMIN] Gave ${amount} pearls` };
+  },
+
+  adminUnlockAllItems() {
+    if (!this.isMod()) return { success: false, error: 'Unauthorized' };
+    
+    if (typeof Shop !== 'undefined') {
+      // Unlock all skins
+      Shop.items.skins.forEach(skin => {
+        if (!Shop.inventory.skins.includes(skin.id)) {
+          Shop.inventory.skins.push(skin.id);
+        }
+      });
+      // Unlock all emotes
+      Shop.items.emotes.forEach(emote => {
+        if (!Shop.inventory.emotes.includes(emote.id)) {
+          Shop.inventory.emotes.push(emote.id);
+        }
+      });
+      // Unlock all trails
+      Shop.items.trails.forEach(trail => {
+        if (!Shop.inventory.trails.includes(trail.id)) {
+          Shop.inventory.trails.push(trail.id);
+        }
+      });
+      // Unlock all nameplates
+      Shop.items.nameplates.forEach(np => {
+        if (!Shop.inventory.nameplates.includes(np.id)) {
+          Shop.inventory.nameplates.push(np.id);
+        }
+      });
+      Shop.save();
+      return { success: true, message: '[ADMIN] Unlocked all items' };
+    }
+    return { success: false, error: 'Shop not loaded' };
+  },
+
+  adminSetLevel(levelNum) {
+    if (!this.isMod()) return { success: false, error: 'Unauthorized' };
+    
+    if (window.GameState && window.GameState.selectedMode === 0) {
+      window.GameState.initLevel(Math.max(0, Math.min(5, levelNum - 1)));
+      return { success: true, message: `[ADMIN] Warped to Level ${levelNum}` };
+    }
+    return { success: false, error: 'Not in Adventure mode' };
+  },
+
+  adminGodMode() {
+    if (!this.isMod()) return { success: false, error: 'Unauthorized' };
+    
+    if (window.GameState && window.GameState.player) {
+      const p = window.GameState.player;
+      p.lives = 99;
+      p.shield = true;
+      p.hasDoubleJump = true;
+      p.canShoot = true;
+      p.weaponLevel = 4;
+      p.spreadShot = true;
+      p.rapidFire = true;
+      return { success: true, message: '[ADMIN] God mode activated' };
+    }
+    return { success: false, error: 'Player not found' };
+  },
+
+  adminSpawnPowerUp(type) {
+    if (!this.isMod()) return { success: false, error: 'Unauthorized' };
+    
+    if (window.GameState && window.GameState.player) {
+      const p = window.GameState.player;
+      switch(type) {
+        case 'SHIELD': p.shield = true; break;
+        case 'DOUBLE_JUMP': p.hasDoubleJump = true; break;
+        case 'SPEED': p.speedBoost = 600; break;
+        case 'WEAPON': 
+          p.canShoot = true; 
+          p.weaponLevel = Math.min(4, p.weaponLevel + 1);
+          break;
+        case 'LIFE': p.lives = Math.min(p.maxLives, p.lives + 1); break;
+        default: return { success: false, error: 'Unknown powerup type' };
+      }
+      return { success: true, message: `[ADMIN] Spawned ${type}` };
+    }
+    return { success: false, error: 'Player not found' };
   }
 };
 

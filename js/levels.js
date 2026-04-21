@@ -397,6 +397,6 @@ const LEVELS = [
       { x: 1900, y: 870 },
       { x: 3000, y: 820 }
     ],
-    boss: { x: 3200, y: 650, type: 'leviathan' }
+    boss: { x: 3200, y: 650, type: 'abyssal_king' }
   }
 ];

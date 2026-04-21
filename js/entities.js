@@ -417,8 +417,8 @@ class Player extends Entity {
   updateShooting(projectiles) {
     if (this.shootCd > 0) this.shootCd--;
     
-    // Auto-fire when holding shoot or dash in bullet hell mode
-    if (this.canShoot && (Input.keys['KeyZ'] || Input.keys['Space'] || Input.dash)) {
+    // Auto-fire when holding F key in bullet hell mode
+    if (this.canShoot && Input.keys['KeyF']) {
       this.shoot(projectiles);
     }
   }
@@ -609,7 +609,15 @@ class Enemy extends Entity {
       case 'leviathan':
         this.w = 120;
         this.h = 80;
-        this.hp = 20;
+        this.hp = 15;  // Easier boss - was 20
+        break;
+      case 'abyssal_king':
+        this.w = 140;
+        this.h = 100;
+        this.hp = 30;  // Final boss - much stronger
+        this.isBoss = true;
+        this.attackPhase = 0;
+        this.phaseTimer = 0;
         break;
     }
   }
@@ -659,25 +667,108 @@ class Enemy extends Entity {
           projectiles.push(new Projectile(this.x + 60, this.y + 40, -6 * diffMult, 0, 'enemy'));
         }
         break;
+      case 'abyssal_king':
+        // Abyssal King - Final Boss with 3 attack phases
+        this.phaseTimer++;
+        
+        // Change phase every 180 frames (3 seconds)
+        if (this.phaseTimer > 180) {
+          this.attackPhase = (this.attackPhase + 1) % 3;
+          this.phaseTimer = 0;
+        }
+        
+        // Phase 0: Spiral Shot
+        if (this.attackPhase === 0 && this.phaseTimer % 20 === 0) {
+          const angle = (this.phaseTimer / 20) * 0.5;
+          for (let i = 0; i < 6; i++) {
+            const rad = angle + (i * Math.PI / 3);
+            projectiles.push(new Projectile(
+              this.x + 70, this.y + 50,
+              Math.cos(rad) * 6 * diffMult,
+              Math.sin(rad) * 6 * diffMult,
+              'enemy'
+            ));
+          }
+        }
+        
+        // Phase 1: Homing Burst
+        if (this.attackPhase === 1 && this.phaseTimer % 30 === 0) {
+          const dx = (player.x + 9) - (this.x + 70);
+          const dy = (player.y + 14) - (this.y + 50);
+          const d = Math.hypot(dx, dy);
+          if (d > 0) {
+            for (let i = -1; i <= 1; i++) {
+              const spread = i * 0.3;
+              projectiles.push(new Projectile(
+                this.x + 70, this.y + 50,
+                (dx / d) * 7 * diffMult + spread,
+                (dy / d) * 7 * diffMult + spread,
+                'enemy'
+              ));
+            }
+          }
+        }
+        
+        // Phase 2: Shockwave + Rain
+        if (this.attackPhase === 2) {
+          if (this.phaseTimer === 60) {
+            // Horizontal shockwave
+            for (let i = 0; i < 5; i++) {
+              projectiles.push(new Projectile(this.x, this.y + 20 + i * 15, -8 * diffMult, 0, 'enemy'));
+            }
+          }
+          if (this.phaseTimer % 40 === 0) {
+            // Rain from above
+            const rainX = player.x + (Math.random() - 0.5) * 400;
+            projectiles.push(new Projectile(rainX, -10, 0, 6 * diffMult, 'enemy'));
+          }
+        }
+        
+        // Always track player slightly
+        if (player.x < this.x) {
+          this.x = Math.max(this.startX - 100, this.x - 0.5 * diffMult);
+        }
+        break;
     }
 
     // Player collision
-    if (player.alive && player.inv <= 0 && AABB(this, player)) {
-      if (player.dashTime > 0 || (player.vy > 0 && player.y + player.h < this.y + this.h * 0.4)) {
-        this.takeDamage();
-        if (player.dashTime <= 0) player.vy = CFG.JUMP_FORCE * 0.7;
+    if (player.alive && AABB(this, player)) {
+      if (this.type === 'leviathan' || this.isBoss) {
+        // BOSS: Player touching boss ALWAYS hurts boss, player never gets hurt
+        // Extra damage if dashing
+        if (player.dashTime > 0) {
+          this.takeDamage(3); // Triple damage when dashing into boss
+          // Bounce player back
+          player.vx = -player.face * 8;
+          player.vy = -4;
+        } else {
+          this.takeDamage(1); // Normal damage when touching
+        }
+        // Small knockback to player but no damage
+        player.vx = -player.face * 3;
+        player.vy = -2;
       } else {
-        player.takeDamage();
+        // Regular enemies: Normal collision rules
+        if (player.inv <= 0) {
+          if (player.dashTime > 0 || (player.vy > 0 && player.y + player.h < this.y + this.h * 0.4)) {
+            this.takeDamage(1);
+            if (player.dashTime <= 0) player.vy = CFG.JUMP_FORCE * 0.7;
+          } else {
+            player.takeDamage();
+          }
+        }
       }
     }
   }
 
-  takeDamage() {
-    this.hp--;
+  takeDamage(amount = 1) {
+    this.hp -= amount;
     this.flash = 10;
-    if (this.type === 'leviathan') {
+    if (this.type === 'leviathan' || this.type === 'abyssal_king') {
       AudioSys.bossHit();
-      if (window.GameState) window.GameState.scrShake = 8;
+      if (window.GameState) {
+        window.GameState.scrShake = this.type === 'abyssal_king' ? 12 : 8;
+      }
     } else {
       AudioSys.enemyHit();
     }
@@ -686,11 +777,12 @@ class Enemy extends Entity {
     if (this.hp <= 0) {
       this.alive = false;
       AudioSys.enemyDie();
+      const isBoss = this.type === 'leviathan' || this.type === 'abyssal_king';
       FX.spawn(this.x + this.w / 2, this.y + this.h / 2,
-        this.type === 'leviathan' ? '#f0f' : '#f44',
-        this.type === 'leviathan' ? 50 : 20,
+        isBoss ? '#f0f' : '#f44',
+        isBoss ? 50 : 20,
         { speed: 6, life: 1 });
-      if (this.type === 'leviathan' && window.GameState) {
+      if (isBoss && window.GameState) {
         window.GameState.bossDefeated = true;
         window.GameState.levelCompleteTimer = 120;
         window.GameState.stats.bossesDefeated++;
@@ -707,12 +799,13 @@ class Enemy extends Entity {
       jelly: '#ff66ff',
       turret: '#ff4444',
       shark: '#8888ff',
-      leviathan: '#aa00aa'
+      leviathan: '#aa00aa',
+      abyssal_king: '#ff0066'
     };
 
     ctx.fillStyle = colors[this.type];
     ctx.shadowColor = colors[this.type];
-    ctx.shadowBlur = this.type === 'leviathan' ? 25 : 15;
+    ctx.shadowBlur = (this.type === 'leviathan' || this.type === 'abyssal_king') ? 25 : 15;
 
     ctx.beginPath();
     if (this.type === 'eel' || this.type === 'shark') {
@@ -736,6 +829,41 @@ class Enemy extends Entity {
       ctx.arc(this.x + 30, this.y + 30, 6, 0, Math.PI * 2);
       ctx.arc(this.x + 90, this.y + 30, 6, 0, Math.PI * 2);
       ctx.fill();
+    } else if (this.type === 'abyssal_king') {
+      // Abyssal King - Crown and glowing eyes
+      // Crown spikes
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath();
+      ctx.moveTo(this.x + 20, this.y + 10);
+      ctx.lineTo(this.x + 30, this.y - 10);
+      ctx.lineTo(this.x + 40, this.y + 10);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(this.x + 100, this.y + 10);
+      ctx.lineTo(this.x + 110, this.y - 10);
+      ctx.lineTo(this.x + 120, this.y + 10);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(this.x + 60, this.y + 5);
+      ctx.lineTo(this.x + 70, this.y - 15);
+      ctx.lineTo(this.x + 80, this.y + 5);
+      ctx.fill();
+      // Glowing eyes
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(this.x + 30, this.y + 30, 25, 25);
+      ctx.fillRect(this.x + 85, this.y + 30, 25, 25);
+      ctx.fillStyle = '#ff0000';
+      ctx.shadowColor = '#ff0000';
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.arc(this.x + 42, this.y + 42, 8, 0, Math.PI * 2);
+      ctx.arc(this.x + 97, this.y + 42, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 25;
+      // Attack phase indicator
+      const phaseColors = ['#22d3ee', '#f59e0b', '#ef4444'];
+      ctx.fillStyle = phaseColors[this.attackPhase || 0];
+      ctx.fillRect(this.x + 50, this.y + 80, 40, 6);
     } else {
       ctx.beginPath();
       ctx.arc(this.x + this.w / 2 - 6, this.y + this.h / 2 - 4, 5, 0, Math.PI * 2);

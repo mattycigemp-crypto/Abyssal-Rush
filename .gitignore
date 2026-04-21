@@ -33,3 +33,5 @@ dist/
 
 # Local data (for development without KV)
 local-data/
+
+.vercel
