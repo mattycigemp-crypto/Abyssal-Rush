@@ -27,11 +27,11 @@
     },
     {
       "source": "/relaxing-rpg",
-      "destination": "/relaxing-rpg-devin-1776793769-initial-setup/dist/index.html"
+      "destination": "/minigames/verdant-forest/dist/index.html"
     },
     {
       "source": "/assets/:path*",
-      "destination": "/relaxing-rpg-devin-1776793769-initial-setup/dist/assets/:path*"
+      "destination": "/minigames/verdant-forest/dist/assets/:path*"
     },
     {
       "source": "/minigames/:path*",
