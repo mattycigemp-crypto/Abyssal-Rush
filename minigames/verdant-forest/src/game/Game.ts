@@ -22,6 +22,8 @@ export class Game {
   private world: World;
   private player: Player;
   private enemies: Wisp[] = [];
+  private deepGroveEnemies = new Set<Wisp>();
+  private deepGroveSpawned = false;
   private input: Input;
   private camera: ThirdPersonCamera;
   private ui: UI;
@@ -36,6 +38,8 @@ export class Game {
   private dayDuration = 360; // seconds for a full cycle
   private footstepAccum = 0;
   private enemiesKilled = 0;
+  private deepWispsKilled = 0;
+  private freeRoam = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -76,6 +80,7 @@ export class Game {
   private bindMenu() {
     const start = document.getElementById('start-btn')!;
     const skip = document.getElementById('skip-intro-btn')!;
+    const freeRoam = document.getElementById('free-roam-btn');
     const resume = document.getElementById('resume-btn')!;
     const quit = document.getElementById('quit-btn')!;
     const volume = document.getElementById('volume-slider') as HTMLInputElement;
@@ -89,6 +94,12 @@ export class Game {
       this.audio.start();
       this.beginIntro(true);
     });
+    if (freeRoam) {
+      freeRoam.addEventListener('click', () => {
+        this.audio.start();
+        this.beginFreeRoam();
+      });
+    }
     resume.addEventListener('click', () => this.resume());
     quit.addEventListener('click', () => window.location.reload());
     volume.addEventListener('input', () => this.audio.setVolume(parseFloat(volume.value)));
@@ -176,6 +187,9 @@ export class Game {
     this.input.requestLock();
     // Queue missions.
     const shrine = this.world.shrinePos;
+    const stones = this.world.ancientStonesPos;
+    const well = this.world.villagePos;
+
     this.missions.queueMission({
       id: 'find-shrine',
       title: 'Find the Shrine of First Light',
@@ -197,7 +211,75 @@ export class Game {
       check: () => this.lightFlameReady,
       onComplete: () => this.onFlameLit(),
     });
+    this.missions.queueMission({
+      id: 'gather-moonpetals',
+      title: 'Gather Moonpetals',
+      description: 'Walk through 5 glowing moonpetals scattered across the valley.',
+      check: () => this.world.moonpetalsCollected() >= 5,
+      onComplete: () => {
+        this.audio.playChime(5);
+        this.ui.flashToast('The petals hum softly in your pack.');
+      },
+    });
+    this.missions.queueMission({
+      id: 'deep-grove-wisps',
+      title: 'Shadows of the Deep Grove',
+      description: 'Drive the shadow-wisps from the deep grove to the west.',
+      check: () => this.deepWispsKilled >= 4,
+      onComplete: () => {
+        this.audio.playChime(7);
+        this.ui.flashToast('The deep grove breathes again.');
+      },
+    });
+    this.missions.queueMission({
+      id: 'seek-ancient-stones',
+      title: 'The Ancient Stones',
+      description: 'Seek the ring of ancient stones to the southwest.',
+      check: () => withinRange(this.player.position, stones, 5),
+      onComplete: () => {
+        this.audio.playChime(9);
+        this.ui.flashToast('The stones remember you.');
+      },
+    });
+    this.missions.queueMission({
+      id: 'return-home',
+      title: 'Return Home',
+      description: 'Carry the news back to the well at the village.',
+      check: () => withinRange(this.player.position, well, 4),
+      onComplete: () => {
+        this.audio.playChime(0);
+        this.ui.flashToast('The well welcomes you home.');
+      },
+    });
+
     this.missions.onAllComplete = () => this.playEndingCutscene();
+  }
+
+  private beginFreeRoam() {
+    this.freeRoam = true;
+    // Skip any queued intro and drop straight into free play.
+    this.ui.showTitle(false);
+    this.state = 'playing';
+    this.ui.showHUD(true);
+
+    // Spawn all wisps across the map so roaming players have optional combat.
+    this.world.enemySpawns.forEach((s) => {
+      this.enemies.push(new Wisp(this.scene, s.clone()));
+    });
+    this.world.deepGroveSpawns.forEach((s) => {
+      const w = new Wisp(this.scene, s.clone());
+      this.enemies.push(w);
+      this.deepGroveEnemies.add(w);
+    });
+    this.deepGroveSpawned = true;
+
+    // Light the shrine flame for ambience — no objectives in this mode.
+    this.world.lightShrineFlame();
+
+    this.missions.onAllComplete = undefined;
+    this.ui.setObjective('Free Roam — wander the Verdant Valley at your leisure.');
+    this.ui.flashToast('Free Roam · explore freely', 3000);
+    this.input.requestLock();
   }
 
   private lightFlameReady = false;
@@ -252,8 +334,8 @@ export class Game {
         { t: 14, pos: new THREE.Vector3(shrine.x - 60, shrine.y + 60, shrine.z + 60), look: new THREE.Vector3(0, 0, 0) },
       ],
       dialogue: [
-        { t: 0.8, speaker: 'Narrator', text: 'The flame caught, softly at first,', hold: 3.8 },
-        { t: 5, speaker: 'Narrator', text: 'then grew warm and steady against the dusk.', hold: 4 },
+        { t: 0.8, speaker: 'Narrator', text: 'Petals gathered, stones remembered, shadows quieted.', hold: 3.8 },
+        { t: 5, speaker: 'Narrator', text: 'The flame grew warm and steady against the dusk.', hold: 4 },
         { t: 10, speaker: 'Narrator', text: 'The Verdant breathed out — and was still.', hold: 4 },
       ],
       onComplete: () => this.showEnding(),
@@ -417,7 +499,8 @@ export class Game {
           this.audio.playHit();
           this.particles.spawnHit(e.pos.clone());
           if (dead) {
-            this.enemiesKilled++;
+            if (this.deepGroveEnemies.has(e)) this.deepWispsKilled++;
+            else this.enemiesKilled++;
             this.audio.playChime(0);
           }
         }
@@ -443,6 +526,39 @@ export class Game {
       }
     } else {
       this.ui.setTooltip(null);
+    }
+
+    // Spawn the deep grove wisps the first time the player ventures west
+    // (or when the mission actively requires it).
+    if (!this.deepGroveSpawned) {
+      const needMission =
+        curMission && curMission.id === 'deep-grove-wisps';
+      const dg = this.world.deepGrovePos;
+      const dgd2 =
+        (this.player.position.x - dg.x) ** 2 +
+        (this.player.position.z - dg.z) ** 2;
+      if (needMission && dgd2 < 22 * 22) {
+        this.world.deepGroveSpawns.forEach((s) => {
+          const w = new Wisp(this.scene, s.clone());
+          this.enemies.push(w);
+          this.deepGroveEnemies.add(w);
+        });
+        this.deepGroveSpawned = true;
+        this.ui.flashToast('Shadows stir in the deep grove…');
+      }
+    }
+
+    // Moonpetal auto-pickup on proximity.
+    const picked = this.world.collectMoonpetalAt(this.player.position);
+    if (picked) {
+      this.audio.playChime(3);
+      const got = this.world.moonpetalsCollected();
+      const total = this.world.moonpetalTotal();
+      const needed = this.freeRoam ? total : 5;
+      this.ui.flashToast(
+        `Moonpetal collected · ${Math.min(got, needed)}/${needed}`,
+        1600
+      );
     }
 
     // HUD
