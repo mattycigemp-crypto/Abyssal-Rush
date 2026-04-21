@@ -579,17 +579,20 @@ export class World {
       if (y < this.waterLevel + 0.3) continue;
       const node = new THREE.Group();
 
+      // Clone materials per-instance so the fade-out animation on pickup
+      // only affects the collected moonpetal, not all remaining ones.
       const stem = new THREE.Mesh(
         new THREE.CylinderGeometry(0.03, 0.03, 0.7, 5),
-        stemMat
+        stemMat.clone()
       );
       stem.position.y = -0.35;
       node.add(stem);
 
       // Four blue petals.
       const petalGeom = new THREE.ConeGeometry(0.16, 0.3, 6);
+      const instancePetalMat = petalMat.clone();
       for (let i = 0; i < 4; i++) {
-        const petal = new THREE.Mesh(petalGeom, petalMat);
+        const petal = new THREE.Mesh(petalGeom, instancePetalMat);
         const a = (i / 4) * Math.PI * 2;
         petal.position.set(Math.cos(a) * 0.12, 0.05, Math.sin(a) * 0.12);
         petal.rotation.z = Math.cos(a) * 0.5;
@@ -599,7 +602,7 @@ export class World {
       }
 
       // Bright center so the flower is visible from far away.
-      const core = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), coreMat);
+      const core = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), coreMat.clone());
       node.add(core);
 
       const light = new THREE.PointLight(0x9acff5, 0.6, 4, 2);
