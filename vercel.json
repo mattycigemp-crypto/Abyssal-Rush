@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "npm ci --prefix minigames/verdant-forest && npm run build --prefix minigames/verdant-forest",
   "rewrites": [
     {
       "source": "/",

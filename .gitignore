@@ -30,6 +30,7 @@ yarn-error.log*
 # Build
 build/
 dist/
+!minigames/verdant-forest/dist/
 
 # Local data (for development without KV)
 local-data/
