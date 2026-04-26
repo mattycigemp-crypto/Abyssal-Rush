@@ -174,6 +174,11 @@ function spawnEnemies(chunk: Chunk, biome: string, difficulty: number, random: (
   for (let i = 0; i < enemyCount; i++) {
     const x = Math.floor(random() * CHUNK_SIZE);
     const y = Math.floor(random() * CHUNK_SIZE);
+    
+    // Add bounds checking to prevent array indexing errors
+    if (y < 0 || y >= CHUNK_SIZE || x < 0 || x >= CHUNK_SIZE) continue;
+    if (!chunk.tiles[y]) continue;
+    
     const tile = chunk.tiles[y][x];
     
     if (!SOLID_TILES.has(tile)) {
@@ -245,6 +250,11 @@ function spawnItems(chunk: Chunk, random: () => number) {
   for (let i = 0; i < itemCount; i++) {
     const x = Math.floor(random() * CHUNK_SIZE);
     const y = Math.floor(random() * CHUNK_SIZE);
+    
+    // Add bounds checking to prevent array indexing errors
+    if (y < 0 || y >= CHUNK_SIZE || x < 0 || x >= CHUNK_SIZE) continue;
+    if (!chunk.tiles[y]) continue;
+    
     const tile = chunk.tiles[y][x];
     
     if (!SOLID_TILES.has(tile)) {
@@ -266,6 +276,11 @@ function spawnNPCs(chunk: Chunk, random: () => number) {
   for (let i = 0; i < npcCount; i++) {
     const x = Math.floor(random() * CHUNK_SIZE);
     const y = Math.floor(random() * CHUNK_SIZE);
+    
+    // Add bounds checking to prevent array indexing errors
+    if (y < 0 || y >= CHUNK_SIZE || x < 0 || x >= CHUNK_SIZE) continue;
+    if (!chunk.tiles[y]) continue;
+    
     const tile = chunk.tiles[y][x];
     
     if (!SOLID_TILES.has(tile)) {

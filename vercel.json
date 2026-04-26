@@ -35,11 +35,15 @@
     },
     {
       "source": "/eternal-realms",
-      "destination": "/minigames/eternal-realms/index.html"
+      "destination": "/minigames/eternal-realms/dist/index.html"
     },
     {
       "source": "/assets/:path*",
       "destination": "/minigames/verdant-forest/dist/assets/:path*"
+    },
+    {
+      "source": "/eternal-assets/:path*",
+      "destination": "/minigames/eternal-realms/dist/assets/:path*"
     },
     {
       "source": "/minigames/:path*",
