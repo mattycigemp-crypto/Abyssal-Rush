@@ -312,6 +312,9 @@ function updateMenuVisibility() {
   document.getElementById('mission-menu')!.classList.toggle('active', state === GameState.MISSION);
 }
 
+// Initialize title screen as active
+document.getElementById('title-screen')!.classList.add('active');
+
 function populateUpgradeMenu() {
   const grid = document.getElementById('upgrade-grid')!;
   grid.innerHTML = '';
