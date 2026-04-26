@@ -1,5 +1,5 @@
 // ─── GAME LOGIC ───────────────────────────────────────────
-import { chunks, getChunkKey, Tile, SOLID_TILES, Enemy, NPC } from './world.js';
+import { chunks, getChunkKey, Tile, SOLID_TILES, Enemy, NPC, generateChunk } from './world.js';
 
 const TS = 48; // tile size
 const CHUNK_SIZE = 16; // chunk size for procedural generation
@@ -23,8 +23,6 @@ export function getTileAt(wx: number, wy: number): Tile {
   
   let chunk = chunks.get(key);
   if (!chunk) {
-    // Import generateChunk dynamically to avoid circular dependency
-    const { generateChunk } = require('./world.js');
     const newChunk = generateChunk(cx, cy);
     chunks.set(key, newChunk);
     chunk = newChunk;

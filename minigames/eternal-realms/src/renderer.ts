@@ -1,5 +1,5 @@
 // ─── RENDERING SYSTEM ─────────────────────────────────────
-import { chunks, Tile, Enemy, Item, NPC } from './world.js';
+import { chunks, Tile, Enemy, Item, NPC, generateChunk } from './world.js';
 import { camera } from './game.js';
 
 const TS = 48; // tile size
@@ -26,7 +26,6 @@ export function renderWorld(ctx: CanvasRenderingContext2D) {
       
       if (!chunk) {
         // Generate chunk on the fly
-        const { generateChunk } = require('./world.js');
         const newChunk = generateChunk(cx, cy);
         chunks.set(key, newChunk);
         chunk = newChunk;
