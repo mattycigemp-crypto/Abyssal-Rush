@@ -242,7 +242,49 @@ html, body, #app {
   font-style: italic;
   color: var(--ink-dim);
   letter-spacing: 2px;
-  margin: 0 0 48px;
+  margin: 0 0 32px;
+}
+
+.chapter-select {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.chapter-btn {
+  background: transparent;
+  color: var(--ink-dim);
+  border: 1px solid var(--accent-dim);
+  padding: 10px 24px;
+  font-family: 'Georgia', serif;
+  font-size: 14px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 2px;
+}
+
+.chapter-btn:hover {
+  background: rgba(255, 217, 138, 0.08);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.chapter-btn.active {
+  background: rgba(255, 217, 138, 0.15);
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 20px rgba(255, 217, 138, 0.2);
+}
+
+.chapter-description {
+  font-size: 14px;
+  color: var(--ink-dim);
+  font-style: italic;
+  margin-bottom: 32px;
+  min-height: 40px;
+  line-height: 1.5;
 }
 
 .menu {

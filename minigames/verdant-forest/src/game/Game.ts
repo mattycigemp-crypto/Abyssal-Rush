@@ -11,7 +11,61 @@ import { CutscenePlayer, type CutsceneSpec } from './Cutscene';
 import { MissionSystem, withinRange } from './Missions';
 import { Particles } from './Particles';
 
-type GameState = 'title' | 'intro' | 'playing' | 'paused' | 'cutscene' | 'ending';
+type GameState = 'title' | 'intro' | 'playing' | 'paused' | 'cutscene' | 'ending' | 'cinematic';
+
+type Chapter = 1 | 2 | 3;
+
+interface ChapterConfig {
+  id: Chapter;
+  title: string;
+  description: string;
+  enemyCount: number;
+  enemyHealth: number;
+  enemyDamage: number;
+  moonpetalsRequired: number;
+  deepGroveWisps: number;
+  dayDuration: number;
+  subtitle: string;
+}
+
+export const CHAPTER_CONFIGS: ChapterConfig[] = [
+  {
+    id: 1,
+    title: 'Chapter I',
+    description: 'Learn the ways of the forest. Basic enemies and gentle challenges await.',
+    enemyCount: 5,
+    enemyHealth: 3,
+    enemyDamage: 1,
+    moonpetalsRequired: 5,
+    deepGroveWisps: 2,
+    dayDuration: 120,
+    subtitle: 'The Awakening'
+  },
+  {
+    id: 2,
+    title: 'Chapter II',
+    description: 'The forest grows restless. Stronger foes and greater rewards.',
+    enemyCount: 8,
+    enemyHealth: 5,
+    enemyDamage: 2,
+    moonpetalsRequired: 8,
+    deepGroveWisps: 3,
+    dayDuration: 100,
+    subtitle: 'The Deepening'
+  },
+  {
+    id: 3,
+    title: 'Chapter III',
+    description: 'Face the ultimate challenge. The forest\'s darkest secrets revealed.',
+    enemyCount: 12,
+    enemyHealth: 8,
+    enemyDamage: 3,
+    moonpetalsRequired: 12,
+    deepGroveWisps: 5,
+    dayDuration: 80,
+    subtitle: 'The Revelation'
+  }
+];
 
 export class Game {
   private renderer: THREE.WebGLRenderer;
@@ -33,13 +87,52 @@ export class Game {
   private particles: Particles;
 
   private state: GameState = 'title';
+  private selectedChapter: Chapter = 1;
+  private chapterConfig: ChapterConfig | null = null;
   // Day/night cycle: 0..1 over 6 real minutes. Start near dawn.
   private dayT = 0.2;
   private dayDuration = 360; // seconds for a full cycle
+  private cinematicTime = 0;
+  private cinematicWaypoints: THREE.Vector3[] = [];
+  private currentWaypoint = 0;
+
+  setSelectedChapter(chapter: Chapter) {
+    this.selectedChapter = chapter;
+  }
+
+  startCinematicMode() {
+    this.state = 'cinematic';
+    this.ui.showTitle(false);
+    this.ui.showHUD(false);
+    this.ui.setLetterbox(true);
+    this.audio.start();
+    this.audio.setMusic('cinematic');
+    
+    // Set up cinematic waypoints
+    this.cinematicWaypoints = [
+      new THREE.Vector3(0, 15, 30),  // Overview of spawn
+      new THREE.Vector3(25, 12, 25), // Village view
+      new THREE.Vector3(-20, 18, -15), // Shrine view
+      new THREE.Vector3(30, 20, -30), // Mountain view
+      new THREE.Vector3(-35, 14, 35), // Forest view
+      new THREE.Vector3(0, 25, 0),   // Center overview
+    ];
+    this.currentWaypoint = 0;
+    this.cinematicTime = 0;
+    
+    // Light the shrine for ambience
+    this.world.lightShrineFlame();
+    
+    // Spawn some ambient enemies
+    this.world.enemySpawns.forEach((s) => {
+      this.enemies.push(new Wisp(this.scene, s.clone(), 30, 1));
+    });
+  }
   private footstepAccum = 0;
   private enemiesKilled = 0;
   private deepWispsKilled = 0;
   private freeRoam = false;
+  private inCombat = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -127,64 +220,157 @@ export class Game {
       return;
     }
 
-    // Build the intro cinematic: sweeping shots of the valley & well.
+    // Build chapter-specific intro cinematic
+    const intro = this.getChapterIntroCutscene();
+    this.state = 'intro';
+    this.cutscene.play(intro);
+    this.audio.setMusic(`chapter${this.selectedChapter}` as any);
+  }
+
+  private getChapterIntroCutscene(): CutsceneSpec {
     const shrine = this.world.shrinePos;
     const well = this.world.villagePos;
 
-    const intro: CutsceneSpec = {
-      duration: 22,
-      letterbox: true,
-      keys: [
-        // High sweeping shot over the valley
-        {
-          t: 0,
-          pos: new THREE.Vector3(-60, 30, -40),
-          look: new THREE.Vector3(0, 2, 0),
-        },
-        {
-          t: 6,
-          pos: new THREE.Vector3(-20, 12, 20),
-          look: new THREE.Vector3(0, 1.5, 0),
-        },
-        // Low shot circling the well
-        {
-          t: 10,
-          pos: new THREE.Vector3(well.x + 5, 1.6, well.z + 5),
-          look: new THREE.Vector3(well.x, 1.3, well.z),
-        },
-        {
-          t: 14,
-          pos: new THREE.Vector3(well.x - 4, 2.0, well.z + 4),
-          look: new THREE.Vector3(well.x, 1.3, well.z),
-        },
-        // Slow push toward the distant shrine
-        {
-          t: 17,
-          pos: new THREE.Vector3(well.x, 4, well.z - 10),
-          look: new THREE.Vector3(shrine.x, shrine.y + 2.5, shrine.z),
-        },
-        {
-          t: 22,
-          pos: new THREE.Vector3(well.x, 6, well.z - 25),
-          look: new THREE.Vector3(shrine.x, shrine.y + 2.5, shrine.z),
-        },
-      ],
-      dialogue: [
-        { t: 1.5, speaker: 'Narrator', text: 'Long ago, the Verdant held its breath.', hold: 4 },
-        { t: 7, speaker: 'Narrator', text: 'Its shrine fell silent. Its flame grew cold.', hold: 4.5 },
-        { t: 13, speaker: 'Narrator', text: 'One traveler still remembers the old paths…', hold: 4 },
-        { t: 18, speaker: 'Narrator', text: '…and you have come to light the embers once more.', hold: 4 },
-      ],
-      onComplete: () => this.startGameplay(),
-    };
-    this.state = 'intro';
-    this.cutscene.play(intro);
+    if (this.selectedChapter === 1) {
+      // Chapter I: The Awakening - peaceful introduction
+      return {
+        duration: 22,
+        letterbox: true,
+        keys: [
+          {
+            t: 0,
+            pos: new THREE.Vector3(-60, 30, -40),
+            look: new THREE.Vector3(0, 2, 0),
+          },
+          {
+            t: 6,
+            pos: new THREE.Vector3(-20, 12, 20),
+            look: new THREE.Vector3(0, 1.5, 0),
+          },
+          {
+            t: 10,
+            pos: new THREE.Vector3(well.x + 5, 1.6, well.z + 5),
+            look: new THREE.Vector3(well.x, 1.3, well.z),
+          },
+          {
+            t: 14,
+            pos: new THREE.Vector3(well.x - 4, 2.0, well.z + 4),
+            look: new THREE.Vector3(well.x, 1.3, well.z),
+          },
+          {
+            t: 17,
+            pos: new THREE.Vector3(well.x, 4, well.z - 10),
+            look: new THREE.Vector3(shrine.x, shrine.y + 2.5, shrine.z),
+          },
+          {
+            t: 22,
+            pos: new THREE.Vector3(well.x, 6, well.z - 25),
+            look: new THREE.Vector3(shrine.x, shrine.y + 2.5, shrine.z),
+          },
+        ],
+        dialogue: [
+          { t: 1.5, speaker: 'Narrator', text: 'Long ago, the Verdant held its breath.', hold: 4 },
+          { t: 7, speaker: 'Narrator', text: 'Its shrine fell silent. Its flame grew cold.', hold: 4.5 },
+          { t: 13, speaker: 'Narrator', text: 'One traveler still remembers the old paths…', hold: 4 },
+          { t: 18, speaker: 'Narrator', text: '…and you have come to light the embers once more.', hold: 4 },
+        ],
+        onComplete: () => this.startGameplay(),
+      };
+    } else if (this.selectedChapter === 2) {
+      // Chapter II: The Deepening - more mysterious
+      return {
+        duration: 26,
+        letterbox: true,
+        keys: [
+          {
+            t: 0,
+            pos: new THREE.Vector3(40, 25, 30),
+            look: new THREE.Vector3(0, 3, 0),
+          },
+          {
+            t: 8,
+            pos: new THREE.Vector3(-30, 15, -20),
+            look: new THREE.Vector3(shrine.x, shrine.y + 3, shrine.z),
+          },
+          {
+            t: 14,
+            pos: new THREE.Vector3(shrine.x + 8, 3, shrine.z + 8),
+            look: new THREE.Vector3(shrine.x, shrine.y + 2, shrine.z),
+          },
+          {
+            t: 20,
+            pos: new THREE.Vector3(shrine.x - 6, 5, shrine.z - 6),
+            look: new THREE.Vector3(shrine.x, shrine.y + 2, shrine.z),
+          },
+          {
+            t: 26,
+            pos: new THREE.Vector3(shrine.x, 8, shrine.z - 15),
+            look: new THREE.Vector3(shrine.x, shrine.y + 2, shrine.z),
+          },
+        ],
+        dialogue: [
+          { t: 2, speaker: 'Narrator', text: 'The forest stirs once more, but shadows lengthen.', hold: 5 },
+          { t: 9, speaker: 'Narrator', text: 'Ancient whispers speak of a growing darkness.', hold: 4.5 },
+          { t: 15, speaker: 'Narrator', text: 'The shrine\'s light flickers, uncertain.', hold: 4 },
+          { t: 21, speaker: 'Narrator', text: 'Only by rekindling the flame can the balance be restored.', hold: 5 },
+        ],
+        onComplete: () => this.startGameplay(),
+      };
+    } else {
+      // Chapter III: The Revelation - dramatic and intense
+      return {
+        duration: 30,
+        letterbox: true,
+        keys: [
+          {
+            t: 0,
+            pos: new THREE.Vector3(-50, 35, -50),
+            look: new THREE.Vector3(0, 5, 0),
+          },
+          {
+            t: 10,
+            pos: new THREE.Vector3(0, 20, 40),
+            look: new THREE.Vector3(shrine.x, shrine.y + 4, shrine.z),
+          },
+          {
+            t: 18,
+            pos: new THREE.Vector3(shrine.x + 12, 4, shrine.z + 12),
+            look: new THREE.Vector3(shrine.x, shrine.y + 3, shrine.z),
+          },
+          {
+            t: 24,
+            pos: new THREE.Vector3(shrine.x - 10, 6, shrine.z - 10),
+            look: new THREE.Vector3(shrine.x, shrine.y + 3, shrine.z),
+          },
+          {
+            t: 30,
+            pos: new THREE.Vector3(shrine.x, 10, shrine.z - 20),
+            look: new THREE.Vector3(shrine.x, shrine.y + 3, shrine.z),
+          },
+        ],
+        dialogue: [
+          { t: 2, speaker: 'Narrator', text: 'The Verdant\'s heart beats with ancient power.', hold: 6 },
+          { t: 11, speaker: 'Narrator', text: 'But the shadows have grown bold, threatening all.', hold: 5 },
+          { t: 19, speaker: 'Narrator', text: 'The final trial awaits at the shrine\'s core.', hold: 5 },
+          { t: 25, speaker: 'Narrator', text: 'Light the eternal flame, or watch darkness consume all.', hold: 5 },
+        ],
+        onComplete: () => this.startGameplay(),
+      };
+    }
   }
 
   private startGameplay() {
     this.state = 'playing';
     this.ui.showHUD(true);
     this.input.requestLock();
+    
+    // Apply chapter configuration
+    const config = CHAPTER_CONFIGS.find(c => c.id === this.selectedChapter)!;
+    this.dayDuration = config.dayDuration;
+    
+    // Set exploration music
+    this.audio.setMusic('exploration');
+    
     // Queue missions.
     const shrine = this.world.shrinePos;
     const stones = this.world.ancientStonesPos;
@@ -200,8 +386,8 @@ export class Game {
     this.missions.queueMission({
       id: 'clear-wisps',
       title: 'Cleanse the Grove',
-      description: 'Defeat the three shadow-wisps lingering around the shrine.',
-      check: () => this.enemiesKilled >= 3,
+      description: `Defeat ${Math.floor(config.enemyCount / 2)} shadow-wisps lingering around the shrine.`,
+      check: () => this.enemiesKilled >= Math.floor(config.enemyCount / 2),
       onComplete: () => this.onGroveCleared(),
     });
     this.missions.queueMission({
@@ -214,8 +400,8 @@ export class Game {
     this.missions.queueMission({
       id: 'gather-moonpetals',
       title: 'Gather Moonpetals',
-      description: 'Walk through 5 glowing moonpetals scattered across the valley.',
-      check: () => this.world.moonpetalsCollected() >= 5,
+      description: `Walk through ${config.moonpetalsRequired} glowing moonpetals scattered across the valley.`,
+      check: () => this.world.moonpetalsCollected() >= config.moonpetalsRequired,
       onComplete: () => {
         this.audio.playChime(5);
         this.ui.flashToast('The petals hum softly in your pack.');
@@ -225,12 +411,15 @@ export class Game {
       id: 'deep-grove-wisps',
       title: 'Shadows of the Deep Grove',
       description: 'Drive the shadow-wisps from the deep grove to the west.',
-      check: () => this.deepWispsKilled >= 4,
+      check: () => this.deepWispsKilled >= config.deepGroveWisps,
       onComplete: () => {
         this.audio.playChime(7);
         this.ui.flashToast('The deep grove breathes again.');
       },
     });
+    
+    // Store chapter config for enemy spawning
+    this.chapterConfig = config;
     this.missions.queueMission({
       id: 'seek-ancient-stones',
       title: 'The Ancient Stones',
@@ -262,12 +451,20 @@ export class Game {
     this.state = 'playing';
     this.ui.showHUD(true);
 
+    // Apply chapter configuration
+    const config = CHAPTER_CONFIGS.find(c => c.id === this.selectedChapter)!;
+    this.dayDuration = config.dayDuration;
+    this.chapterConfig = config;
+    
+    // Set exploration music
+    this.audio.setMusic('exploration');
+
     // Spawn all wisps across the map so roaming players have optional combat.
     this.world.enemySpawns.forEach((s) => {
-      this.enemies.push(new Wisp(this.scene, s.clone()));
+      this.enemies.push(new Wisp(this.scene, s.clone(), config.enemyHealth, config.enemyDamage));
     });
     this.world.deepGroveSpawns.forEach((s) => {
-      const w = new Wisp(this.scene, s.clone());
+      const w = new Wisp(this.scene, s.clone(), config.enemyHealth * 1.5, config.enemyDamage + 1);
       this.enemies.push(w);
       this.deepGroveEnemies.add(w);
     });
@@ -285,9 +482,10 @@ export class Game {
   private lightFlameReady = false;
 
   private onReachShrine() {
-    // Spawn enemies around the grove
+    // Spawn enemies around the grove with chapter-based stats
+    const config = this.chapterConfig || CHAPTER_CONFIGS[0];
     this.world.enemySpawns.forEach((s) => {
-      this.enemies.push(new Wisp(this.scene, s.clone()));
+      this.enemies.push(new Wisp(this.scene, s.clone(), config.enemyHealth, config.enemyDamage));
     });
     // Quick reactive cutscene
     this.state = 'cutscene';
@@ -442,6 +640,12 @@ export class Game {
       return;
     }
 
+    if (this.state === 'cinematic') {
+      this.updateCinematic(dt);
+      this.input.endFrame();
+      return;
+    }
+
     if (this.state === 'playing') {
       this.updatePlaying(dt);
     }
@@ -478,12 +682,24 @@ export class Game {
     this.camera.update(this.player.position, dt);
 
     // Enemies update
+    let nearEnemy = false;
     for (const e of this.enemies) {
       if (!e.alive) continue;
-      e.update(dt, this.timer.getElapsed(), this.player.position, () => {
-        this.player.damage(6);
+      const dist = this.player.position.distanceTo(e.pos);
+      if (dist < 15) nearEnemy = true;
+      e.update(dt, this.timer.getElapsed(), this.player.position, (damage: number) => {
+        this.player.damage(damage);
         this.audio.playHit();
       });
+    }
+    
+    // Combat music detection
+    if (nearEnemy && !this.inCombat) {
+      this.inCombat = true;
+      this.audio.setMusic('combat');
+    } else if (!nearEnemy && this.inCombat) {
+      this.inCombat = false;
+      this.audio.setMusic('exploration');
     }
 
     // Attack hit resolution: when player is mid-swing & on hit frame.
@@ -538,8 +754,9 @@ export class Game {
         (this.player.position.x - dg.x) ** 2 +
         (this.player.position.z - dg.z) ** 2;
       if (needMission && dgd2 < 22 * 22) {
+        const config = this.chapterConfig || CHAPTER_CONFIGS[0];
         this.world.deepGroveSpawns.forEach((s) => {
-          const w = new Wisp(this.scene, s.clone());
+          const w = new Wisp(this.scene, s.clone(), config.enemyHealth * 1.5, config.enemyDamage + 1);
           this.enemies.push(w);
           this.deepGroveEnemies.add(w);
         });
@@ -564,7 +781,7 @@ export class Game {
     // HUD
     this.ui.setHealth(this.player.hp / this.player.maxHp);
     this.ui.setStamina(this.player.stamina / this.player.maxStamina);
-
+    
     // Missions
     this.missions.update();
 
@@ -574,5 +791,57 @@ export class Game {
       this.player.position.set(0, terrainHeight(0, 6), 6);
       this.ui.flashToast('You awaken by the well…', 2000);
     }
+  }
+
+  private updateCinematic(dt: number) {
+    this.cinematicTime += dt;
+    
+    // Move camera between waypoints
+    const waypointDuration = 12; // seconds per waypoint
+    const progress = (this.cinematicTime % waypointDuration) / waypointDuration;
+    
+    if (progress < 0.01) {
+      this.currentWaypoint = (this.currentWaypoint + 1) % this.cinematicWaypoints.length;
+    }
+    
+    const current = this.cinematicWaypoints[this.currentWaypoint];
+    const next = this.cinematicWaypoints[(this.currentWaypoint + 1) % this.cinematicWaypoints.length];
+    
+    // Smooth camera movement
+    const t = this.smoothStep(progress);
+    const cameraPos = new THREE.Vector3().lerpVectors(current, next, t);
+    
+    // Add gentle camera sway
+    const sway = Math.sin(this.cinematicTime * 0.5) * 2;
+    cameraPos.y += sway;
+    
+    this.camera.camera.position.copy(cameraPos);
+    
+    // Look at center of world with slight rotation
+    const lookTarget = new THREE.Vector3(0, 5, 0);
+    const lookOffset = new THREE.Vector3(
+      Math.sin(this.cinematicTime * 0.3) * 10,
+      Math.cos(this.cinematicTime * 0.2) * 5,
+      Math.sin(this.cinematicTime * 0.4) * 10
+    );
+    this.camera.camera.lookAt(lookTarget.add(lookOffset));
+    
+    // Update enemies for ambience
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      e.update(dt, this.timer.getElapsed(), new THREE.Vector3(0, 0, 0), () => {});
+    }
+    
+    // Allow exit with ESC
+    if (this.input.escPressedEdge) {
+      this.state = 'title';
+      this.ui.showTitle(true);
+      this.ui.setLetterbox(false);
+      this.audio.setMusic('ambient');
+    }
+  }
+
+  private smoothStep(t: number): number {
+    return t * t * (3 - 2 * t);
   }
 }

@@ -16,10 +16,14 @@ export class Wisp {
   private attackCooldown = 0;
   private hitFlashT = 0;
   radius = 0.6;
+  private damage = 1;
 
-  constructor(scene: THREE.Scene, spawn: THREE.Vector3) {
+  constructor(scene: THREE.Scene, spawn: THREE.Vector3, health: number = 30, damage: number = 1) {
     this.pos.copy(spawn);
     this.phase = Math.random() * Math.PI * 2;
+    this.hp = health;
+    this.maxHp = health;
+    this.damage = damage;
 
     // Core sphere (dark)
     this.core = new THREE.Mesh(
@@ -63,7 +67,7 @@ export class Wisp {
     scene.add(this.group);
   }
 
-  update(dt: number, time: number, target: THREE.Vector3, onHitPlayer: () => void) {
+  update(dt: number, time: number, target: THREE.Vector3, onHitPlayer: (damage: number) => void) {
     if (!this.alive) return;
     this.phase += dt;
 
@@ -95,7 +99,7 @@ export class Wisp {
     // Attack on contact
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
     if (dist < 1.4 && this.attackCooldown <= 0) {
-      onHitPlayer();
+      onHitPlayer(this.damage);
       this.attackCooldown = 1.2;
     }
 

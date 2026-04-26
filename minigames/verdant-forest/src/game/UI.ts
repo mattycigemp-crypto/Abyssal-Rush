@@ -22,6 +22,13 @@ export class UI {
   private title = $('title-screen');
   private pause = $('pause-menu');
   private toast = $('toast');
+  private chapterDescription = $('chapter-description');
+  private chapterBtns = [
+    $('chapter-1'),
+    $('chapter-2'),
+    $('chapter-3')
+  ];
+  private selectedChapter = 1;
 
   setHealth(pct: number) {
     this.healthFill.style.width = `${Math.max(0, Math.min(100, pct * 100))}%`;
@@ -85,5 +92,24 @@ export class UI {
     void this.toast.offsetWidth;
     this.toast.style.animation = '';
     window.setTimeout(() => this.toast.classList.add('hidden'), ms);
+  }
+
+  setChapterDescription(text: string) {
+    this.chapterDescription.textContent = text;
+  }
+
+  selectChapter(chapter: 1 | 2 | 3) {
+    this.selectedChapter = chapter;
+    this.chapterBtns.forEach((btn, index) => {
+      if (index + 1 === chapter) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+
+  getSelectedChapter(): 1 | 2 | 3 {
+    return this.selectedChapter as 1 | 2 | 3;
   }
 }
