@@ -7,27 +7,35 @@
     },
     {
       "source": "/game",
-      "destination": "/index.html"
+      "destination": "/minigames/deep-dive/index.html"
     },
     {
       "source": "/space-shooter",
-      "destination": "/minigames/space-shooter.html"
+      "destination": "/minigames/space-shooter/index.html"
     },
     {
       "source": "/pool",
-      "destination": "/minigames/pool.html"
+      "destination": "/minigames/pool/index.html"
     },
     {
       "source": "/deep-dive",
-      "destination": "/minigames/deep-dive.html"
+      "destination": "/minigames/deep-dive/index.html"
     },
     {
       "source": "/night-drive",
-      "destination": "/minigames/night_drive_city/index.html"
+      "destination": "/minigames/night-drive/index.html"
     },
     {
       "source": "/relaxing-rpg",
       "destination": "/minigames/verdant-forest/dist/index.html"
+    },
+    {
+      "source": "/nebula-rider",
+      "destination": "/minigames/nebula-rider/index.html"
+    },
+    {
+      "source": "/eternal-realms",
+      "destination": "/minigames/eternal-realms/index.html"
     },
     {
       "source": "/assets/:path*",

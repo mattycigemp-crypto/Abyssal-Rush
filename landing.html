@@ -339,7 +339,7 @@
 
     .game-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
       gap: 2rem;
     }
 
@@ -623,7 +623,7 @@
     <section class="games-section" id="games">
       <div class="section-header">
         <h2>Choose Your Adventure</h2>
-        <p>Four games, one shared progression system</p>
+        <p>Six games, one shared progression system</p>
       </div>
       
       <div class="game-grid">
@@ -676,6 +676,58 @@
             <span class="tag">Endless</span>
             <span class="tag rank">Ranked</span>
             <span class="tag shop">Shop</span>
+          </div>
+        </div>
+
+        <!-- Nebula Rider -->
+        <div class="game-card" onclick="location.href='/nebula-rider'">
+          <div class="game-header-row">
+            <div class="game-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);">🌌</div>
+            <div class="game-title-row">
+              <h3>Nebula Rider</h3>
+              <span class="subtitle">3D Interstellar Shooter</span>
+            </div>
+          </div>
+          <p>A cinematic WebGL space shooter. Dodge asteroids, vaporize enemies, boost through nebulae, and face epic bosses in a fully 3D environment.</p>
+          <div class="tech-stack" style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 10px; font-family: monospace; opacity: 0.7;">
+            <code>CODE: THREE.JS & WEBGL</code>
+          </div>
+          <div class="game-meta">
+            <span class="meta-item">🌠 3D Nebula</span>
+            <span class="meta-item">⚡ Boost System</span>
+            <span class="meta-item">🎬 Cinematic Mode</span>
+          </div>
+          <div class="game-tags">
+            <span class="tag">3D</span>
+            <span class="tag">WebGL</span>
+            <span class="tag rank">Ranked</span>
+            <span class="tag" style="color: #ff4bff; font-weight: 800; border-color: #ff4bff;">NEW: NEBULA RIDER</span>
+          </div>
+        </div>
+
+        <!-- Eternal Realms -->
+        <div class="game-card" onclick="location.href='/eternal-realms'">
+          <div class="game-header-row">
+            <div class="game-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #dc2626 100%);">⚔️</div>
+            <div class="game-title-row">
+              <h3>Eternal Realms</h3>
+              <span class="subtitle">Infinite RPG Adventure</span>
+            </div>
+          </div>
+          <p>An infinite free-roam RPG with procedural worlds, 20+ missions, 8 skins, 6 pets, 9 upgrade paths, and 5 unlockable abilities. Level up, customize, and explore forever!</p>
+          <div class="tech-stack" style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 10px; font-family: monospace; opacity: 0.7;">
+            <code>CODE: TYPESCRIPT & CANVAS</code>
+          </div>
+          <div class="game-meta">
+            <span class="meta-item">🌍 Infinite World</span>
+            <span class="meta-item">⬆️ Leveling</span>
+            <span class="meta-item">🎭 Skins</span>
+          </div>
+          <div class="game-tags">
+            <span class="tag">RPG</span>
+            <span class="tag">Procedural</span>
+            <span class="tag">Open World</span>
+            <span class="tag" style="color: #f59e0b; font-weight: 800; border-color: #f59e0b;">NEW: ETERNAL REALMS</span>
           </div>
         </div>
 

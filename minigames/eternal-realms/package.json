@@ -1,0 +1,15 @@
+{
+  "name": "eternal-realms",
+  "version": "1.0.0",
+  "description": "Infinite free-roam RPG with leveling, upgrades, skins, pets, abilities, and crazy missions",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0"
+  }
+}

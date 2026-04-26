@@ -1,0 +1,13 @@
+{
+  "name": "nebula-rider",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Nebula Rider — a cinematic 3D WebGL space shooter.",
+  "scripts": {
+    "serve": "python3 -m http.server 8080",
+    "lint": "node scripts/check-syntax.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "ci": "npm run lint && npm run smoke"
+  }
+}

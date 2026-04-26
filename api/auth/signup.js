@@ -1,17 +1,7 @@
-import { createClient } from 'redis';
+import { kv } from '@vercel/kv';
 import crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-
-// Create Redis client
-const kv = createClient({
-  url: process.env.KV_URL || process.env.REDIS_URL
-});
-
-// Connect to Redis
-if (!kv.isReady) {
-  kv.connect().catch(console.error);
-}
 
 function hashPassword(password) {
   return crypto.createHash('sha256').update(password + JWT_SECRET).digest('hex');
@@ -120,7 +110,3 @@ export default async function handler(req, res) {
   }
 }
 
-// Ensure Redis connection on cold start
-if (!kv.isReady) {
-  kv.connect().catch(console.error);
-}

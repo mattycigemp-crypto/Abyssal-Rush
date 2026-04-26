@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="theme-color" content="#050014" />
+    <title>Nebula Rider — An Interstellar Shooter</title>
+    <meta name="description" content="A cinematic 3D WebGL space-shooter. Dodge asteroids, vaporize enemies, and ride the nebula." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g' cx='50%25' cy='50%25'%3E%3Cstop offset='0%25' stop-color='%23ff4bff'/%3E%3Cstop offset='60%25' stop-color='%235b2bff'/%3E%3Cstop offset='100%25' stop-color='%23050014'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='30' fill='url(%23g)'/%3E%3Cpath d='M32 10 L40 48 L32 42 L24 48 Z' fill='%23fff' opacity='.9'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/minigames/nebula-rider/styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <canvas id="game" aria-label="Nebula Rider game canvas" tabindex="-1"></canvas>
+
+    <div id="hud" class="hidden" role="region" aria-label="Gameplay HUD">
+      <div class="hud-top">
+        <div class="stat">
+          <div class="label">SCORE</div>
+          <div id="score" class="value" aria-live="polite">0</div>
+        </div>
+        <div class="stat center">
+          <div class="label">WAVE</div>
+          <div id="wave" class="value">1</div>
+        </div>
+        <div class="stat right">
+          <div class="label">DISTANCE</div>
+          <div id="distance" class="value">0<span class="unit"> km</span></div>
+        </div>
+      </div>
+
+      <div class="hud-bottom">
+        <div class="meter">
+          <div class="meter-label">HULL</div>
+          <div class="bar" role="progressbar" aria-label="Hull integrity"><div id="hull-bar" class="bar-fill hull"></div></div>
+        </div>
+        <div class="meter">
+          <div class="meter-label">BOOST</div>
+          <div class="bar" role="progressbar" aria-label="Boost energy"><div id="boost-bar" class="bar-fill boost"></div></div>
+        </div>
+        <div class="meter">
+          <div class="meter-label">HEAT</div>
+          <div class="bar" role="progressbar" aria-label="Weapon heat"><div id="heat-bar" class="bar-fill heat"></div></div>
+        </div>
+      </div>
+
+      <div id="boss-bar-wrap" class="hidden" role="region" aria-label="Boss health">
+        <div id="boss-label">BOSS</div>
+        <div class="boss-bar-outer"><div id="boss-bar" class="boss-bar-fill"></div></div>
+      </div>
+
+      <div id="powerups" class="powerups" aria-live="polite" aria-label="Active powerups"></div>
+
+      <div id="crosshair" aria-hidden="true">
+        <div class="ch-ring"></div>
+        <div class="ch-dot"></div>
+        <div class="ch-bracket tl"></div>
+        <div class="ch-bracket tr"></div>
+        <div class="ch-bracket bl"></div>
+        <div class="ch-bracket br"></div>
+      </div>
+
+      <div id="damage-vignette" aria-hidden="true"></div>
+
+      <div id="combo" class="hidden" aria-hidden="true">
+        <span id="combo-x">x2</span>
+        <span class="combo-label">COMBO</span>
+      </div>
+
+      <div id="pickups" aria-live="polite"></div>
+    </div>
+
+    <div id="start-screen" class="overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
+      <div class="title-wrap">
+        <h1 class="title" id="start-title">
+          <span class="title-main">NEBULA</span>
+          <span class="title-sub">RIDER</span>
+        </h1>
+        <p class="tagline">An interstellar shooter</p>
+      </div>
+      <div class="controls-card">
+        <div class="controls-grid">
+          <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / Arrows</div><div>Steer</div>
+          <div><kbd>Mouse</kbd></div><div>Aim</div>
+          <div><kbd>Space</kbd> / <kbd>Click</kbd></div><div>Fire lasers</div>
+          <div><kbd>Shift</kbd></div><div>Boost</div>
+          <div><kbd>Q</kbd> / <kbd>E</kbd></div><div>Roll</div>
+          <div><kbd>P</kbd> / <kbd>Esc</kbd></div><div>Pause</div>
+          <div><kbd>M</kbd></div><div>Mute</div>
+        </div>
+      </div>
+      <div class="button-row">
+        <button id="start-btn" class="btn-primary" aria-label="Engage and start the game">ENGAGE</button>
+        <button id="cinematic-btn" class="btn-ghost" aria-label="Watch an auto-piloted cinematic">CINEMATIC MODE</button>
+        <button id="settings-btn" class="btn-ghost" aria-label="Open settings">SETTINGS</button>
+      </div>
+      <p class="hint">Destroy asteroids, collect crystals, survive the nebula. Bosses appear every third wave.</p>
+    </div>
+
+    <div id="cinematic-overlay" aria-hidden="true">
+      <div class="letterbox top"></div>
+      <div class="letterbox bottom"></div>
+      <div id="cinematic-title">
+        <h1>NEBULA RIDER</h1>
+        <p>A PROCEDURAL SHORT</p>
+      </div>
+      <div id="cinematic-exit-hint"><kbd>ESC</kbd> TO EXIT</div>
+    </div>
+
+    <div id="pause-screen" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+      <h2 id="pause-title">PAUSED</h2>
+      <p class="muted">Take a breath. The nebula isn't going anywhere.</p>
+      <div class="button-row">
+        <button id="resume-btn" class="btn-primary" aria-label="Resume game">RESUME</button>
+        <button id="settings-btn-pause" class="btn-ghost" aria-label="Open settings">SETTINGS</button>
+        <button id="quit-btn" class="btn-ghost" aria-label="Quit to title">QUIT</button>
+      </div>
+      <p class="hint">Tip: hold <kbd>Shift</kbd> to boost through tight gaps.</p>
+    </div>
+
+    <div id="gameover-screen" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="go-title">
+      <h2 class="go-title" id="go-title">HULL BREACH</h2>
+      <div id="final-rank" class="rank-badge hidden" aria-live="polite"></div>
+      <div class="go-stats">
+        <div><span class="label">FINAL SCORE</span><span id="final-score" class="value">0</span></div>
+        <div><span class="label">WAVE REACHED</span><span id="final-wave" class="value">0</span></div>
+        <div><span class="label">DISTANCE</span><span id="final-distance" class="value">0 km</span></div>
+      </div>
+      <div class="button-row">
+        <button id="restart-btn" class="btn-primary" aria-label="Restart the game">RE-ENGAGE</button>
+        <button id="settings-btn-over" class="btn-ghost" aria-label="Open settings">SETTINGS</button>
+      </div>
+    </div>
+
+    <div id="settings-screen" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <h2 id="settings-title">SETTINGS</h2>
+      <div class="settings-body">
+        <section class="settings-group" aria-label="Audio settings">
+          <h3>AUDIO</h3>
+          <label class="row">
+            <span>Master volume</span>
+            <input id="set-master" type="range" min="0" max="1" step="0.01" aria-label="Master volume" />
+          </label>
+          <label class="row">
+            <span>Music volume</span>
+            <input id="set-music" type="range" min="0" max="1" step="0.01" aria-label="Music volume" />
+          </label>
+          <label class="row">
+            <span>SFX volume</span>
+            <input id="set-sfx" type="range" min="0" max="1" step="0.01" aria-label="SFX volume" />
+          </label>
+          <label class="row check">
+            <input id="set-mute" type="checkbox" /><span>Mute all</span>
+          </label>
+        </section>
+
+        <section class="settings-group" aria-label="Controls settings">
+          <h3>CONTROLS</h3>
+          <label class="row">
+            <span>Mouse sensitivity</span>
+            <input id="set-mouse" type="range" min="0.1" max="2" step="0.05" aria-label="Mouse sensitivity" />
+          </label>
+          <label class="row">
+            <span>Roll sensitivity</span>
+            <input id="set-roll" type="range" min="0.1" max="2" step="0.05" aria-label="Roll sensitivity" />
+          </label>
+          <label class="row check">
+            <input id="set-inverty" type="checkbox" /><span>Invert Y-axis</span>
+          </label>
+          <label class="row check">
+            <input id="set-touch" type="checkbox" /><span>Show on-screen touch controls</span>
+          </label>
+        </section>
+
+        <section class="settings-group" aria-label="Performance settings">
+          <h3>PERFORMANCE</h3>
+          <label class="row check">
+            <input id="set-highquality" type="checkbox" checked /><span>High quality (bloom + FXAA)</span>
+          </label>
+          <p class="hint">Disable if experiencing lag or freezing</p>
+        </section>
+
+        <section class="settings-group" aria-label="Accessibility settings">
+          <h3>ACCESSIBILITY</h3>
+          <label class="row check">
+            <input id="set-colorblind" type="checkbox" /><span>Colorblind palette (high contrast)</span>
+          </label>
+          <label class="row check">
+            <input id="set-reducedmotion" type="checkbox" /><span>Reduced motion (no shake / aberration / grain)</span>
+          </label>
+        </section>
+
+        <section id="admin-section" class="settings-group admin hidden" aria-label="Admin settings">
+          <h3>ADMIN <span class="admin-badge">UNLOCKED</span></h3>
+          <p class="admin-hint">Hidden dev tools. Not intended for normal play.</p>
+          <label class="row check">
+            <input id="set-autofire" type="checkbox" /><span>Auto-fire (continuous lasers, for scripted testing)</span>
+          </label>
+          <div class="row" style="justify-content: flex-start; gap: 10px; flex-wrap: wrap;">
+            <button id="admin-copy-link" class="btn-ghost btn-small" type="button" aria-label="Copy share-link with current admin flags">COPY ADMIN LINK</button>
+            <button id="admin-lock" class="btn-ghost btn-small" type="button" aria-label="Lock admin panel">LOCK</button>
+          </div>
+          <p id="admin-link-feedback" class="admin-hint" aria-live="polite"></p>
+        </section>
+
+        <section class="settings-group leaderboard" aria-label="Local leaderboard">
+          <h3>LOCAL LEADERBOARD</h3>
+          <ol id="leaderboard-list" class="leaderboard-list">
+            <li class="empty">No runs recorded yet.</li>
+          </ol>
+          <button id="leaderboard-clear" class="btn-ghost btn-small" type="button">Clear leaderboard</button>
+        </section>
+      </div>
+      <div class="button-row">
+        <button id="settings-close" class="btn-primary" type="button" aria-label="Close settings">DONE</button>
+        <button id="settings-reset" class="btn-ghost" type="button" aria-label="Reset settings to defaults">RESET DEFAULTS</button>
+      </div>
+    </div>
+
+    <div id="loading" class="overlay" aria-live="polite">
+      <div class="loading-ring" aria-hidden="true"></div>
+      <p>Calibrating inertial dampeners…</p>
+    </div>
+
+    <script type="module" src="/minigames/nebula-rider/src/main.js"></script>
+  </body>
+</html>
