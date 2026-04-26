@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Night Drive: Infinite</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      background: #0a0a1a; 
+      overflow: hidden; 
+      font-family: 'Arial', sans-serif;
+    }
+    #game-container { position: relative; width: 100vw; height: 100vh; }
+    canvas { display: block; }
+    
+    #ui {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: #00ffcc;
+      font-size: 18px;
+      text-shadow: 0 0 10px #00ffcc;
+      z-index: 100;
+    }
+    
+    #speed {
+      font-size: 32px;
+      font-weight: bold;
+    }
+    
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.7);
+      font-size: 14px;
+      text-align: center;
+      z-index: 100;
+    }
+    
+    #hub-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      background: rgba(0,0,0,0.7);
+      border: 1px solid #00ffcc;
+      color: #00ffcc;
+      text-decoration: none;
+      border-radius: 5px;
+      font-size: 14px;
+      z-index: 100;
+      transition: 0.3s;
+    }
+    
+    #hub-btn:hover {
+      background: #00ffcc;
+      color: #0a0a1a;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="ui">
+      <div>SPEED: <span id="speed">0</span> MPH</div>
+      <div>DISTANCE: <span id="distance">0</span> MI</div>
+    </div>
+    <div id="controls">
+      WASD or Arrow Keys to drive | Space for brake
+    </div>
+    <a href="/" id="hub-btn">Return to Hub</a>
+  </div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // Game setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0a1a);
+    scene.fog = new THREE.Fog(0x0a0a1a, 50, 200);
+    
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    document.getElementById('game-container').appendChild(renderer.domElement);
+    
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(50, 100, 50);
+    directionalLight.castShadow = true;
+    scene.add(directionalLight);
+    
+    // Create road
+    const roadGeometry = new THREE.PlaneGeometry(20, 1000);
+    const roadMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x1a1a2e,
+      roughness: 0.8
+    });
+    const road = new THREE.Mesh(roadGeometry, roadMaterial);
+    road.rotation.x = -Math.PI / 2;
+    road.position.y = 0;
+    road.receiveShadow = true;
+    scene.add(road);
+    
+    // Road lines
+    const lineGeometry = new THREE.PlaneGeometry(0.5, 1000);
+    const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+    const line = new THREE.Mesh(lineGeometry, lineMaterial);
+    line.rotation.x = -Math.PI / 2;
+    line.position.y = 0.01;
+    scene.add(line);
+    
+    // Create buildings
+    const buildings = [];
+    const buildingGeometry = new THREE.BoxGeometry(10, 30, 10);
+    const buildingMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x2a2a4e,
+      emissive: 0x00ffcc,
+      emissiveIntensity: 0.2
+    });
+    
+    for (let i = 0; i < 50; i++) {
+      const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+      building.position.x = (Math.random() > 0.5 ? 1 : -1) * (15 + Math.random() * 20);
+      building.position.z = -i * 30 - 50;
+      building.position.y = 15;
+      building.castShadow = true;
+      building.receiveShadow = true;
+      scene.add(building);
+      buildings.push(building);
+    }
+    
+    // Create player car
+    const carGroup = new THREE.Group();
+    
+    // Car body
+    const bodyGeometry = new THREE.BoxGeometry(2, 1, 4);
+    const bodyMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0xff0066,
+      emissive: 0xff0066,
+      emissiveIntensity: 0.3
+    });
+    const carBody = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    carBody.position.y = 0.5;
+    carBody.castShadow = true;
+    carGroup.add(carBody);
+    
+    // Car roof
+    const roofGeometry = new THREE.BoxGeometry(1.8, 0.8, 2);
+    const roofMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x1a1a2e,
+      emissive: 0x00ffcc,
+      emissiveIntensity: 0.2
+    });
+    const carRoof = new THREE.Mesh(roofGeometry, roofMaterial);
+    carRoof.position.y = 1.2;
+    carRoof.position.z = -0.3;
+    carGroup.add(carRoof);
+    
+    // Headlights
+    const headlightGeometry = new THREE.SphereGeometry(0.2);
+    const headlightMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+    
+    const leftHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+    leftHeadlight.position.set(-0.6, 0.5, 2);
+    carGroup.add(leftHeadlight);
+    
+    const rightHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+    rightHeadlight.position.set(0.6, 0.5, 2);
+    carGroup.add(rightHeadlight);
+    
+    // Headlight beams
+    const spotlight1 = new THREE.SpotLight(0xffff00, 2, 100, 0.5, 0.5);
+    spotlight1.position.set(-0.6, 0.5, 2);
+    spotlight1.target.position.set(-0.6, 0, 20);
+    carGroup.add(spotlight1);
+    carGroup.add(spotlight1.target);
+    
+    const spotlight2 = new THREE.SpotLight(0xffff00, 2, 100, 0.5, 0.5);
+    spotlight2.position.set(0.6, 0.5, 2);
+    spotlight2.target.position.set(0.6, 0, 20);
+    carGroup.add(spotlight2);
+    carGroup.add(spotlight2.target);
+    
+    carGroup.position.set(0, 0, 0);
+    scene.add(carGroup);
+    
+    // Camera position
+    camera.position.set(0, 5, 10);
+    camera.lookAt(0, 0, 0);
+    
+    // Game state
+    let speed = 0;
+    let maxSpeed = 2;
+    let acceleration = 0.02;
+    let deceleration = 0.01;
+    let turnSpeed = 0.03;
+    let distance = 0;
+    let carX = 0;
+    
+    // Controls
+    const keys = {};
+    
+    document.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+    });
+    
+    document.addEventListener('keyup', (e) => {
+      keys[e.code] = false;
+    });
+    
+    // Game loop
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      // Acceleration
+      if (keys['KeyW'] || keys['ArrowUp']) {
+        speed = Math.min(speed + acceleration, maxSpeed);
+      } else if (keys['KeyS'] || keys['ArrowDown']) {
+        speed = Math.max(speed - acceleration, -maxSpeed / 2);
+      } else {
+        // Natural deceleration
+        if (speed > 0) speed = Math.max(speed - deceleration, 0);
+        if (speed < 0) speed = Math.min(speed + deceleration, 0);
+      }
+      
+      // Brake
+      if (keys['Space']) {
+        speed = speed * 0.95;
+      }
+      
+      // Turning
+      if (keys['KeyA'] || keys['ArrowLeft']) {
+        carX -= turnSpeed * (speed / maxSpeed);
+      }
+      if (keys['KeyD'] || keys['ArrowRight']) {
+        carX += turnSpeed * (speed / maxSpeed);
+      }
+      
+      // Keep car on road
+      carX = Math.max(-8, Math.min(8, carX));
+      carGroup.position.x = carX;
+      
+      // Move road texture to create illusion of movement
+      distance += speed;
+      
+      // Move buildings
+      buildings.forEach(building => {
+        building.position.z += speed;
+        if (building.position.z > 50) {
+          building.position.z = -1000 - Math.random() * 100;
+        }
+      });
+      
+      // Update camera to follow car
+      camera.position.x = carX * 0.3;
+      camera.lookAt(carX * 0.5, 0, -20);
+      
+      // Update UI
+      document.getElementById('speed').textContent = Math.floor(speed * 60);
+      document.getElementById('distance').textContent = Math.floor(distance / 100);
+      
+      renderer.render(scene, camera);
+    }
+    
+    animate();
+    
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
