@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
+  <title>Eternal Realms</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a12; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Georgia', serif; }
+    #game-container { position: relative; }
+    canvas { display: block; cursor: none; }
+    
+    /* Hub Button */
+    #hub-btn {
+      position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+      padding: 8px 20px; background: rgba(0,0,0,0.7); border: 1px solid rgba(255,200,100,0.4);
+      border-radius: 20px; color: #ffd980; font-size: 0.75rem; letter-spacing: 2px; 
+      cursor: pointer; z-index: 1000; backdrop-filter: blur(10px); text-decoration: none; 
+      text-transform: uppercase; transition: 0.3s;
+    }
+    #hub-btn:hover { background: #ffd980; color: #000; }
+    
+    /* UI Overlays */
+    .ui-overlay {
+      position: absolute; pointer-events: none; opacity: 0; transition: opacity 0.3s;
+    }
+    .ui-overlay.active { opacity: 1; pointer-events: auto; }
+    
+    /* Title Screen */
+    #title-screen {
+      position: absolute; inset: 0; display: flex; flex-direction: column; 
+      justify-content: center; align-items: center; background: rgba(5,5,15,0.95);
+      z-index: 100;
+    }
+    #title-screen h1 {
+      font-size: 3.5rem; color: #ffd980; text-shadow: 0 0 30px rgba(255,200,100,0.5);
+      margin-bottom: 0.5rem; letter-spacing: 4px;
+    }
+    #title-screen p { color: #aaa; font-style: italic; margin-bottom: 2rem; }
+    
+    .menu { display: flex; flex-direction: column; gap: 1rem; }
+    .menu-btn {
+      padding: 12px 32px; background: rgba(255,200,100,0.1); border: 1px solid rgba(255,200,100,0.3);
+      color: #ffd980; font-family: 'Georgia', serif; font-size: 1rem; cursor: pointer;
+      transition: 0.3s; border-radius: 4px; letter-spacing: 1px;
+    }
+    .menu-btn:hover { background: rgba(255,200,100,0.2); border-color: #ffd980; }
+    .menu-btn.secondary { font-size: 0.85rem; padding: 10px 24px; }
+    
+    /* HUD */
+    #hud {
+      position: absolute; inset: 0; pointer-events: none; z-index: 50;
+    }
+    .hud-top-left {
+      position: absolute; top: 15px; left: 15px;
+    }
+    .stat-bar {
+      width: 200px; height: 20px; background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.2);
+      margin-bottom: 8px; border-radius: 3px; overflow: hidden;
+    }
+    .stat-fill { height: 100%; transition: width 0.3s; }
+    .hp-fill { background: linear-gradient(90deg, #cc3333, #ff5555); }
+    .xp-fill { background: linear-gradient(90deg, #3366cc, #5588ff); }
+    .stamina-fill { background: linear-gradient(90deg, #cc9933, #ffcc55); }
+    .stat-label {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      color: #fff; font-size: 0.75rem; text-shadow: 1px 1px 2px #000;
+    }
+    
+    .hud-top-right {
+      position: absolute; top: 15px; right: 15px; text-align: right;
+    }
+    .level-display {
+      color: #ffd980; font-size: 1.2rem; margin-bottom: 5px;
+    }
+    .gold-display {
+      color: #ffcc00; font-size: 0.9rem;
+    }
+    
+    .hud-bottom-left {
+      position: absolute; bottom: 15px; left: 15px;
+    }
+    .quest-tracker {
+      background: rgba(0,0,0,0.7); border: 1px solid rgba(255,200,100,0.3);
+      padding: 12px; border-radius: 4px; max-width: 280px;
+    }
+    .quest-title { color: #ffd980; font-size: 0.9rem; margin-bottom: 4px; }
+    .quest-objective { color: #aaa; font-size: 0.8rem; }
+    
+    .hud-bottom-right {
+      position: absolute; bottom: 15px; right: 15px;
+    }
+    .minimap {
+      width: 150px; height: 150px; background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 4px;
+    }
+    
+    /* Upgrade Menu */
+    #upgrade-menu {
+      position: absolute; inset: 0; background: rgba(5,5,15,0.95);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 200;
+    }
+    #upgrade-menu h2 { color: #ffd980; margin-bottom: 2rem; font-size: 2rem; }
+    .upgrade-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;
+      max-width: 900px; padding: 0 2rem;
+    }
+    .upgrade-card {
+      background: rgba(255,200,100,0.05); border: 1px solid rgba(255,200,100,0.2);
+      padding: 1.5rem; border-radius: 8px; text-align: center; cursor: pointer;
+      transition: 0.3s;
+    }
+    .upgrade-card:hover { background: rgba(255,200,100,0.1); border-color: #ffd980; }
+    .upgrade-card h3 { color: #ffd980; margin-bottom: 0.5rem; }
+    .upgrade-card p { color: #aaa; font-size: 0.85rem; margin-bottom: 1rem; }
+    .upgrade-cost { color: #ffcc00; font-weight: bold; }
+    
+    /* Skin Menu */
+    #skin-menu {
+      position: absolute; inset: 0; background: rgba(5,5,15,0.95);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 200;
+    }
+    .skin-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+      max-width: 800px; padding: 0 2rem;
+    }
+    .skin-card {
+      background: rgba(255,200,100,0.05); border: 1px solid rgba(255,200,100,0.2);
+      padding: 1rem; border-radius: 8px; text-align: center; cursor: pointer;
+      transition: 0.3s;
+    }
+    .skin-card:hover { background: rgba(255,200,100,0.1); border-color: #ffd980; }
+    .skin-card.selected { border-color: #ffd980; background: rgba(255,200,100,0.15); }
+    
+    /* Pet Menu */
+    #pet-menu {
+      position: absolute; inset: 0; background: rgba(5,5,15,0.95);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 200;
+    }
+    .pet-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;
+      max-width: 700px; padding: 0 2rem;
+    }
+    .pet-card {
+      background: rgba(255,200,100,0.05); border: 1px solid rgba(255,200,100,0.2);
+      padding: 1.5rem; border-radius: 8px; text-align: center; cursor: pointer;
+      transition: 0.3s;
+    }
+    .pet-card:hover { background: rgba(255,200,100,0.1); border-color: #ffd980; }
+    .pet-card.active { border-color: #ffd980; background: rgba(255,200,100,0.15); }
+    
+    /* Ability Bar */
+    #ability-bar {
+      position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 8px;
+    }
+    .ability-slot {
+      width: 50px; height: 50px; background: rgba(0,0,0,0.7); border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; position: relative;
+    }
+    .ability-slot.active { border-color: #ffd980; }
+    .ability-key {
+      position: absolute; bottom: 2px; right: 4px; font-size: 0.7rem; color: #aaa;
+    }
+    .ability-cooldown {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.7); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.8rem;
+    }
+    
+    /* Mission Menu */
+    #mission-menu {
+      position: absolute; inset: 0; background: rgba(5,5,15,0.95);
+      display: flex; flex-direction: column; align-items: center; z-index: 200;
+      padding: 2rem; overflow-y: auto;
+    }
+    #mission-menu h2 { color: #ffd980; margin-bottom: 1.5rem; font-size: 2rem; }
+    .mission-list { max-width: 800px; width: 100%; }
+    .mission-item {
+      background: rgba(255,200,100,0.05); border: 1px solid rgba(255,200,100,0.2);
+      padding: 1rem; margin-bottom: 0.75rem; border-radius: 6px; cursor: pointer;
+      transition: 0.3s;
+    }
+    .mission-item:hover { background: rgba(255,200,100,0.1); border-color: #ffd980; }
+    .mission-item.completed { border-color: #44cc44; opacity: 0.7; }
+    .mission-title { color: #ffd980; font-size: 1rem; margin-bottom: 0.25rem; }
+    .mission-desc { color: #aaa; font-size: 0.85rem; margin-bottom: 0.5rem; }
+    .mission-reward { color: #ffcc00; font-size: 0.8rem; }
+    
+    /* Notifications */
+    #notifications {
+      position: absolute; top: 100px; right: 15px; display: flex; flex-direction: column;
+      gap: 8px; pointer-events: none;
+    }
+    .notification {
+      background: rgba(0,0,0,0.8); border: 1px solid rgba(255,200,100,0.4);
+      padding: 12px 20px; border-radius: 4px; color: #ffd980; font-size: 0.9rem;
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    /* Controls hint */
+    .controls-hint {
+      position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+      color: #666; font-size: 0.75rem; text-align: center;
+    }
+  </style>
+  <script type="module" crossorigin src="/assets/index-D7VyCTrz.js"></script>
+</head>
+<body>
+  <div id="game-container">
+    <a href="/" id="hub-btn">Return to Hub</a>
+    <canvas id="game"></canvas>
+    
+    <!-- Title Screen -->
+    <div id="title-screen">
+      <h1>ETERNAL REALMS</h1>
+      <p>An Infinite Journey Through Infinite Worlds</p>
+      <div class="menu">
+        <button class="menu-btn" id="start-btn">Begin Journey</button>
+        <button class="menu-btn secondary" id="free-roam-btn">Free Roam</button>
+        <button class="menu-btn secondary" id="load-btn">Continue</button>
+      </div>
+      <div class="controls-hint" style="margin-top: 2rem;">
+        <strong>WASD</strong> move &nbsp; <strong>Space</strong> attack &nbsp; <strong>E</strong> interact<br>
+        <strong>1-5</strong> abilities &nbsp; <strong>U</strong> upgrades &nbsp; <strong>K</strong> skins &nbsp; <strong>P</strong> pets &nbsp; <strong>M</strong> missions &nbsp; <strong>Ctrl+S</strong> save &nbsp; <strong>Esc</strong> pause
+      </div>
+    </div>
+    
+    <!-- HUD -->
+    <div id="hud" class="ui-overlay">
+      <div class="hud-top-left">
+        <div class="stat-bar">
+          <div class="stat-fill hp-fill" id="hp-bar"></div>
+          <span class="stat-label" id="hp-text">100/100</span>
+        </div>
+        <div class="stat-bar">
+          <div class="stat-fill xp-fill" id="xp-bar"></div>
+          <span class="stat-label" id="xp-text">0/100</span>
+        </div>
+        <div class="stat-bar">
+          <div class="stat-fill stamina-fill" id="stamina-bar"></div>
+          <span class="stat-label" id="stamina-text">100/100</span>
+        </div>
+      </div>
+      
+      <div class="hud-top-right">
+        <div class="level-display">Level <span id="level">1</span></div>
+        <div class="gold-display">⬥ <span id="gold">0</span></div>
+      </div>
+      
+      <div class="hud-bottom-left">
+        <div class="quest-tracker">
+          <div class="quest-title" id="quest-title">No Active Quest</div>
+          <div class="quest-objective" id="quest-objective">Press M to view missions</div>
+        </div>
+      </div>
+      
+      <div class="hud-bottom-right">
+        <canvas class="minimap" id="minimap"></canvas>
+      </div>
+      
+      <div id="ability-bar">
+        <div class="ability-slot" id="ability-1">⚔️<span class="ability-key">1</span></div>
+        <div class="ability-slot" id="ability-2">🔥<span class="ability-key">2</span></div>
+        <div class="ability-slot" id="ability-3">❄️<span class="ability-key">3</span></div>
+        <div class="ability-slot" id="ability-4">⚡<span class="ability-key">4</span></div>
+        <div class="ability-slot" id="ability-5">🛡️<span class="ability-key">5</span></div>
+      </div>
+    </div>
+    
+    <!-- Upgrade Menu -->
+    <div id="upgrade-menu" class="ui-overlay">
+      <h2>⚔️ Upgrades</h2>
+      <div class="upgrade-grid" id="upgrade-grid"></div>
+      <button class="menu-btn secondary" id="close-upgrade-btn" style="margin-top: 2rem;">Close</button>
+    </div>
+    
+    <!-- Skin Menu -->
+    <div id="skin-menu" class="ui-overlay">
+      <h2>🎭 Skins</h2>
+      <div class="skin-grid" id="skin-grid"></div>
+      <button class="menu-btn secondary" id="close-skin-btn" style="margin-top: 2rem;">Close</button>
+    </div>
+    
+    <!-- Pet Menu -->
+    <div id="pet-menu" class="ui-overlay">
+      <h2>🐾 Pets</h2>
+      <div class="pet-grid" id="pet-grid"></div>
+      <button class="menu-btn secondary" id="close-pet-btn" style="margin-top: 2rem;">Close</button>
+    </div>
+    
+    <!-- Mission Menu -->
+    <div id="mission-menu" class="ui-overlay">
+      <h2>📜 Missions</h2>
+      <div class="mission-list" id="mission-list"></div>
+      <button class="menu-btn secondary" id="close-mission-btn" style="margin-top: 2rem;">Close</button>
+    </div>
+    
+    <!-- Notifications -->
+    <div id="notifications"></div>
+  </div>
+  
+</body>
+</html>
