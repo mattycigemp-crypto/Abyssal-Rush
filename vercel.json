@@ -43,7 +43,7 @@
     },
     {
       "source": "/eternal-assets/:path*",
-      "destination": "/minigames/eternal-realms/dist/assets/:path*"
+      "destination": "/minigames/eternal-realms/dist/:path*"
     },
     {
       "source": "/minigames/:path*",
